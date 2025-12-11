@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { Make } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, Pagination } from '../components/UI';
-import { Plus, Trash2, Edit2, Globe, Upload, FileText } from 'lucide-react';
+import { Plus, Trash2, Edit2, Upload, FileText } from 'lucide-react';
 
 export const MakesView: React.FC = () => {
   const [makes, setMakes] = useState<Make[]>([]);
@@ -13,7 +13,7 @@ export const MakesView: React.FC = () => {
   const ITEMS_PER_PAGE = 20;
   
   // Form State
-  const [formData, setFormData] = useState<Partial<Make>>({ name: '', nameAr: '', country: '', website: '' });
+  const [formData, setFormData] = useState<Partial<Make>>({ name: '', nameAr: '', country: '' });
   
   // Bulk State
   const [bulkData, setBulkData] = useState('');
@@ -32,7 +32,7 @@ export const MakesView: React.FC = () => {
       setFormData(make);
     } else {
       setEditingId(null);
-      setFormData({ name: '', nameAr: '', country: '', website: '' });
+      setFormData({ name: '', nameAr: '', country: '' });
     }
     setIsModalOpen(true);
   };
@@ -48,8 +48,7 @@ export const MakesView: React.FC = () => {
         id: Date.now().toString(),
         name: formData.name!,
         nameAr: formData.nameAr || '',
-        country: formData.country!,
-        website: formData.website || ''
+        country: formData.country!
       };
       DataService.saveMakes([...makes, newMake]);
     }
@@ -76,21 +75,19 @@ export const MakesView: React.FC = () => {
     const newMakes: Make[] = [];
     
     lines.forEach(line => {
-      // CSV Format: Name, Country, Website
+      // CSV Format: Name, Country
       const parts = line.split(',');
       if (parts.length < 2) return;
       
       const name = parts[0].trim();
       const country = parts[1].trim();
-      const website = parts[2] ? parts[2].trim() : '';
       
       if (!name || !country) return;
       
       newMakes.push({
         id: Date.now() + Math.random().toString(),
         name,
-        country,
-        website
+        country
       });
     });
 
@@ -143,7 +140,6 @@ export const MakesView: React.FC = () => {
               <TableHead>ID</TableHead>
               <TableHead>Make Name</TableHead>
               <TableHead>Country of Origin</TableHead>
-              <TableHead>Website</TableHead>
               <TableHead>Actions</TableHead>
             </TableHeader>
             <tbody>
@@ -160,13 +156,6 @@ export const MakesView: React.FC = () => {
                   </TableCell>
                   <TableCell>{make.country}</TableCell>
                   <TableCell>
-                    {make.website ? (
-                      <a href={`https://${make.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
-                        <Globe size={14} /> {make.website}
-                      </a>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>
                     <div className="flex gap-2">
                       <Button variant="ghost" className="p-2 h-auto" onClick={(e) => { e.stopPropagation(); handleOpenModal(make); }}>
                         <Edit2 size={16} />
@@ -180,7 +169,7 @@ export const MakesView: React.FC = () => {
               ))}
               {makes.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                     No makes found. Click "Add Make" to create one.
                   </td>
                 </tr>
@@ -230,12 +219,6 @@ export const MakesView: React.FC = () => {
             onChange={e => setFormData({...formData, country: e.target.value})}
             placeholder="e.g. Japan"
           />
-          <Input 
-            label="Website (Optional)" 
-            value={formData.website} 
-            onChange={e => setFormData({...formData, website: e.target.value})}
-            placeholder="toyota.com"
-          />
         </div>
       </Modal>
 
@@ -264,8 +247,8 @@ export const MakesView: React.FC = () => {
                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-slate-700 file:shadow-sm hover:file:bg-slate-100 cursor-pointer"
              />
              <div className="mt-3 text-xs text-slate-500 font-mono bg-slate-100 p-2 rounded">
-              Format: Name, Country, Website<br/>
-              Example: Tesla, USA, tesla.com
+              Format: Name, Country<br/>
+              Example: Tesla, USA
             </div>
           </div>
           

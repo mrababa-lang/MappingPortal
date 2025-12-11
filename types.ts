@@ -13,7 +13,6 @@ export interface Make {
   name: string;
   nameAr?: string;
   country: string;
-  website?: string;
 }
 
 export interface Model {

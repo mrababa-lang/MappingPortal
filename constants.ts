@@ -8,9 +8,9 @@ export const INITIAL_TYPES = [
 ];
 
 export const INITIAL_MAKES = [
-  { id: '1', name: 'Toyota', nameAr: 'تويوتا', country: 'Japan', website: 'toyota.com' },
-  { id: '2', name: 'Ford', nameAr: 'فورد', country: 'USA', website: 'ford.com' },
-  { id: '3', name: 'BMW', nameAr: 'بي ام دبليو', country: 'Germany', website: 'bmw.com' },
+  { id: '1', name: 'Toyota', nameAr: 'تويوتا', country: 'Japan' },
+  { id: '2', name: 'Ford', nameAr: 'فورد', country: 'USA' },
+  { id: '3', name: 'BMW', nameAr: 'بي ام دبليو', country: 'Germany' },
 ];
 
 export const INITIAL_MODELS = [
