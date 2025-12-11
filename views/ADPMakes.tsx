@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMaster, ADPMakeMapping, Make, ADPMapping } from '../types';
-import { Card, Button, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, Select } from '../components/UI';
+import { Card, Button, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, SearchableSelect } from '../components/UI';
 import { Edit2, Link, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface UniqueADPMake {
@@ -246,11 +246,12 @@ export const ADPMakesView: React.FC = () => {
           )}
 
           <div className="space-y-2">
-            <Select 
+            <SearchableSelect 
                label="Map to SlashData Make"
                value={selectedSdMakeId}
-               onChange={e => setSelectedSdMakeId(e.target.value)}
+               onChange={value => setSelectedSdMakeId(value)}
                options={sdMakes.map(m => ({ value: m.id, label: m.name }))}
+               placeholder="Search for manufacturer..."
             />
             <p className="text-xs text-slate-500 mt-2">
                <strong className="text-indigo-600">Note:</strong> Saving this mapping will automatically update all unmapped or 'Missing Make' records in the ADP Mapping table that match this ADP Make ID.

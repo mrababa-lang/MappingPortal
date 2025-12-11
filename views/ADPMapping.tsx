@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMapping, Model, ADPMaster, Make, MappingStatus } from '../types';
-import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, Pagination } from '../components/UI';
+import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, Pagination, SearchableSelect } from '../components/UI';
 import { Edit2, Link, Unlink, AlertCircle, CheckCircle2, Filter, X, Download, HelpCircle, AlertTriangle } from 'lucide-react';
 
 export const ADPMappingView: React.FC = () => {
@@ -508,23 +508,25 @@ export const ADPMappingView: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <Select 
+                    <SearchableSelect 
                       label="Select SD Make"
                       value={selectedMakeId}
-                      onChange={e => {
-                        setSelectedMakeId(e.target.value);
+                      onChange={value => {
+                        setSelectedMakeId(value);
                         setSelectedModelId(''); // Reset model when make changes
                       }}
                       options={makes.map(m => ({ value: m.id, label: m.name }))}
+                      placeholder="Search for manufacturer..."
                     />
                     
                     {mappingType === 'MAPPED' && (
-                      <Select 
+                      <SearchableSelect 
                         label="Select SD Model"
                         value={selectedModelId}
-                        onChange={e => setSelectedModelId(e.target.value)}
+                        onChange={value => setSelectedModelId(value)}
                         options={availableModels.map(m => ({ value: m.id, label: m.name }))}
                         disabled={!selectedMakeId}
+                        placeholder="Search for model..."
                       />
                     )}
 

@@ -8,6 +8,7 @@ CREATE TABLE Users (
     id VARCHAR(50) PRIMARY KEY, -- Unique identifier (e.g., UUID or string ID)
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL, -- Hashed password for authentication
     role VARCHAR(20) CHECK (role IN ('Admin', 'Editor', 'Viewer')), -- Role-based access control
     status VARCHAR(20) CHECK (status IN ('Active', 'Inactive')),
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP

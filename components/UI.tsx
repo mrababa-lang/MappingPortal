@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Loader2, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Loader2, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Search, Check } from 'lucide-react';
 
 // --- Card ---
 export const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
@@ -91,6 +91,110 @@ export const Select: React.FC<SelectProps> = ({ label, options, className = '', 
   </div>
 );
 
+// --- Searchable Select (Combobox) ---
+interface SearchableSelectProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+export const SearchableSelect: React.FC<SearchableSelectProps> = ({ 
+  label, value, onChange, options, placeholder = "Select...", disabled, className = '' 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  
+  const selectedOption = options.find(opt => opt.value === value);
+
+  // Close when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [wrapperRef]);
+
+  // Sync search term with value when closed, but clear when opened to search
+  useEffect(() => {
+    if (!isOpen && selectedOption) {
+      setSearchTerm(selectedOption.label);
+    } else if (!isOpen && !selectedOption) {
+      setSearchTerm('');
+    }
+  }, [isOpen, selectedOption]);
+
+  const filteredOptions = options.filter(opt => 
+    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className={`space-y-1.5 ${className}`} ref={wrapperRef}>
+      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
+      <div className="relative">
+        <div 
+          className={`flex items-center w-full bg-slate-50 border border-slate-200 rounded-lg focus-within:ring-2 focus-within:ring-slash-red/20 focus-within:border-slash-red/50 transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <Search size={16} className="ml-3 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            className="w-full px-3 py-2.5 bg-transparent border-none focus:outline-none text-slate-900 text-sm placeholder:text-slate-400"
+            placeholder={placeholder}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => {
+              setIsOpen(true);
+              setSearchTerm(''); // Clear on focus to show all options
+            }}
+            disabled={disabled}
+          />
+          <div className="mr-3 text-slate-400 cursor-pointer" onClick={() => !disabled && setIsOpen(!isOpen)}>
+            <ChevronDown size={16} />
+          </div>
+        </div>
+
+        {/* Dropdown */}
+        {isOpen && !disabled && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+            {filteredOptions.length > 0 ? (
+              <ul className="py-1">
+                {filteredOptions.map((opt) => (
+                  <li 
+                    key={opt.value}
+                    className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between group hover:bg-slate-50 ${opt.value === value ? 'bg-slate-50 text-slate-900 font-medium' : 'text-slate-600'}`}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                      setSearchTerm(opt.label);
+                    }}
+                  >
+                    {opt.label}
+                    {opt.value === value && <Check size={14} className="text-emerald-500" />}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-3 text-sm text-slate-400 text-center">
+                No matching results
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 // --- Modal ---
 interface ModalProps {
@@ -114,7 +218,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             <X size={20} />
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto max-h-[70vh]">
           {children}
         </div>
         {footer && (
