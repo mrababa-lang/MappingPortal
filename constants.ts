@@ -54,7 +54,7 @@ export const INITIAL_ADP_MAPPING = [
 ];
 
 export const INITIAL_USERS = [
-  { id: '1', name: 'Admin User', email: 'admin@slashdata.ae', role: 'Admin', status: 'Active', lastActive: '2023-10-27 10:30 AM' },
-  { id: '2', name: 'John Doe', email: 'john@slashdata.ae', role: 'Editor', status: 'Active', lastActive: '2023-10-26 04:15 PM' },
-  { id: '3', name: 'Jane Smith', email: 'jane@slashdata.ae', role: 'Viewer', status: 'Inactive', lastActive: '2023-09-15 09:00 AM' },
+  { id: '1', name: 'Admin User', email: 'admin@slashdata.ae', password: 'password', role: 'Admin', status: 'Active', lastActive: '2023-10-27 10:30 AM' },
+  { id: '2', name: 'John Doe', email: 'john@slashdata.ae', password: 'password', role: 'Editor', status: 'Active', lastActive: '2023-10-26 04:15 PM' },
+  { id: '3', name: 'Jane Smith', email: 'jane@slashdata.ae', password: 'password', role: 'Viewer', status: 'Inactive', lastActive: '2023-09-15 09:00 AM' },
 ];

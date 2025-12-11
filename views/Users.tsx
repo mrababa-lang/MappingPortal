@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { User } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Select, Pagination } from '../components/UI';
-import { Plus, Trash2, Edit2, UserCircle, Shield, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, UserCircle, Shield, CheckCircle2, XCircle, Lock } from 'lucide-react';
 
 export const UsersView: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -13,7 +13,7 @@ export const UsersView: React.FC = () => {
   
   // Form State
   const [formData, setFormData] = useState<Partial<User>>({ 
-    name: '', email: '', role: 'Viewer', status: 'Active' 
+    name: '', email: '', role: 'Viewer', status: 'Active', password: ''
   });
 
   useEffect(() => {
@@ -27,10 +27,11 @@ export const UsersView: React.FC = () => {
   const handleOpenModal = (user?: User) => {
     if (user) {
       setEditingId(user.id);
-      setFormData(user);
+      // Don't show existing password, allow reset
+      setFormData({ ...user, password: '' });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', role: 'Viewer', status: 'Active' });
+      setFormData({ name: '', email: '', role: 'Viewer', status: 'Active', password: '' });
     }
     setIsModalOpen(true);
   };
@@ -38,14 +39,31 @@ export const UsersView: React.FC = () => {
   const handleSave = () => {
     if (!formData.name || !formData.email) return;
 
+    // Require password for new users
+    if (!editingId && !formData.password) {
+      alert("Password is required for new users.");
+      return;
+    }
+
     if (editingId) {
-      const updated = users.map(u => u.id === editingId ? { ...u, ...formData } as User : u);
+      const updated = users.map(u => {
+        if (u.id === editingId) {
+          // Only update password if a new one was entered
+          const updatedUser = { ...u, ...formData };
+          if (!formData.password) {
+            updatedUser.password = u.password;
+          }
+          return updatedUser as User;
+        }
+        return u;
+      });
       DataService.saveUsers(updated);
     } else {
       const newUser: User = {
         id: Date.now().toString(),
         name: formData.name!,
         email: formData.email!,
+        password: formData.password!,
         role: formData.role! as 'Admin' | 'Editor' | 'Viewer',
         status: formData.status! as 'Active' | 'Inactive',
         lastActive: 'Just now'
@@ -174,6 +192,22 @@ export const UsersView: React.FC = () => {
             onChange={e => setFormData({...formData, email: e.target.value})}
             placeholder="john@example.com"
           />
+          
+          {/* Password Field */}
+          <div className="relative">
+             <div className="absolute top-9 left-3 text-slate-400 pointer-events-none">
+               <Lock size={16} />
+             </div>
+             <Input 
+               label={editingId ? "New Password (Leave blank to keep current)" : "Password"}
+               type="password"
+               value={formData.password}
+               onChange={e => setFormData({...formData, password: e.target.value})}
+               placeholder={editingId ? "••••••••" : "Enter secure password"}
+               className="pl-9"
+             />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Select 
               label="Role"

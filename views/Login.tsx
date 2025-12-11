@@ -22,15 +22,21 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     // Simulate API latency
     setTimeout(() => {
       const users = DataService.getUsers();
-      // Simple mock authentication - In production, use real auth
+      // Mock authentication
       const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
       if (user && user.status === 'Active') {
-        onLogin(user);
+        // Verify Password
+        if (user.password && user.password !== password) {
+          setError('Invalid credentials.');
+        } else {
+          // Success
+          onLogin(user);
+        }
       } else {
         setError('Invalid credentials or inactive account.');
         // For demo purposes, hint at valid credentials
-        if (!email) setError('Try "admin@slashdata.ae"');
+        if (!email) setError('Try "admin@slashdata.ae" with password "password"');
       }
       setIsLoading(false);
     }, 800);

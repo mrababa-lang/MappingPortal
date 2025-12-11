@@ -66,6 +66,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: 'Admin' | 'Editor' | 'Viewer';
   status: 'Active' | 'Inactive';
   lastActive: string;
