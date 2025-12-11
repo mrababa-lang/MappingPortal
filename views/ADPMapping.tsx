@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
-import { ADPMapping, Model, ADPMaster, Make } from '../types';
+import { ADPMapping, Model, ADPMaster, Make, MappingStatus } from '../types';
 import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input } from '../components/UI';
-import { Edit2, Link, Unlink, AlertCircle, CheckCircle2, Filter, X, Download } from 'lucide-react';
+import { Edit2, Link, Unlink, AlertCircle, CheckCircle2, Filter, X, Download, HelpCircle, AlertTriangle } from 'lucide-react';
 
 export const ADPMappingView: React.FC = () => {
   const [adpList, setAdpList] = useState<ADPMaster[]>([]);
@@ -16,8 +16,10 @@ export const ADPMappingView: React.FC = () => {
   // Filters
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'mapped' | 'unmapped' | 'issues'>('all');
   
   // Form State
+  const [mappingType, setMappingType] = useState<MappingStatus>('MAPPED');
   const [selectedMakeId, setSelectedMakeId] = useState<string>('');
   const [selectedModelId, setSelectedModelId] = useState<string>('');
 
@@ -38,38 +40,67 @@ export const ADPMappingView: React.FC = () => {
 
   const getSDModelDetails = (mapping?: ADPMapping) => {
     if (!mapping) return { makeName: '-', modelName: '-' };
-    const model = models.find(m => m.id === mapping.modelId);
-    if (!model) return { makeName: 'Unknown', modelName: 'Unknown' };
-    const make = makes.find(m => m.id === model.makeId);
-    return {
-      makeName: make ? make.name : 'Unknown',
-      modelName: model.name
-    };
+
+    // Case 1: Standard Mapping
+    if ((!mapping.status || mapping.status === 'MAPPED') && mapping.modelId) {
+      const model = models.find(m => m.id === mapping.modelId);
+      if (!model) return { makeName: 'Unknown', modelName: 'Unknown' };
+      const make = makes.find(m => m.id === model.makeId);
+      return {
+        makeName: make ? make.name : 'Unknown',
+        modelName: model.name
+      };
+    }
+
+    // Case 2: Missing Model (Make is known)
+    if (mapping.status === 'MISSING_MODEL' && mapping.makeId) {
+      const make = makes.find(m => m.id === mapping.makeId);
+      return {
+        makeName: make ? make.name : 'Unknown',
+        modelName: 'N/A'
+      };
+    }
+
+    // Case 3: Missing Make
+    if (mapping.status === 'MISSING_MAKE') {
+      return { makeName: 'N/A', modelName: 'N/A' };
+    }
+
+    return { makeName: '-', modelName: '-' };
   };
 
   const handleOpenModal = (adpItem: ADPMaster) => {
     setEditingAdpItem(adpItem);
     const mapping = getMappingForAdp(adpItem.id);
     
+    // Default State
+    setMappingType('MAPPED');
+    setSelectedMakeId('');
+    setSelectedModelId('');
+
     if (mapping) {
-      const model = models.find(m => m.id === mapping.modelId);
-      if (model) {
-        setSelectedMakeId(model.makeId);
-        setSelectedModelId(model.id);
-      } else {
-        setSelectedMakeId('');
-        setSelectedModelId('');
+      setMappingType(mapping.status || 'MAPPED');
+      
+      if (mapping.status === 'MISSING_MODEL' && mapping.makeId) {
+        setSelectedMakeId(mapping.makeId);
+      } else if ((!mapping.status || mapping.status === 'MAPPED') && mapping.modelId) {
+        const model = models.find(m => m.id === mapping.modelId);
+        if (model) {
+          setSelectedMakeId(model.makeId);
+          setSelectedModelId(model.id);
+        }
       }
-    } else {
-      setSelectedMakeId('');
-      setSelectedModelId('');
     }
     
     setIsModalOpen(true);
   };
 
   const handleSave = () => {
-    if (!editingAdpItem || !selectedModelId) return;
+    if (!editingAdpItem) return;
+    
+    // Validation
+    if (mappingType === 'MAPPED' && !selectedModelId) return;
+    if (mappingType === 'MISSING_MODEL' && !selectedMakeId) return;
 
     const existingMappingIndex = mappings.findIndex(m => m.adpId === editingAdpItem.id);
     let newMappings = [...mappings];
@@ -78,25 +109,21 @@ export const ADPMappingView: React.FC = () => {
     const currentUser = '1';
     const timestamp = new Date().toISOString();
 
+    const mappingData: ADPMapping = {
+      id: existingMappingIndex >= 0 ? mappings[existingMappingIndex].id : Date.now().toString(),
+      adpId: editingAdpItem.id,
+      updatedAt: timestamp,
+      updatedBy: currentUser,
+      status: mappingType,
+      // Clear fields based on type
+      modelId: mappingType === 'MAPPED' ? selectedModelId : undefined,
+      makeId: mappingType === 'MISSING_MODEL' ? selectedMakeId : undefined,
+    };
+
     if (existingMappingIndex >= 0) {
-      // Update
-      newMappings[existingMappingIndex] = {
-        ...newMappings[existingMappingIndex],
-        modelId: selectedModelId,
-        updatedAt: timestamp,
-        updatedBy: currentUser,
-        reviewedAt: undefined, // Reset review on update
-        reviewedBy: undefined
-      };
+      newMappings[existingMappingIndex] = mappingData;
     } else {
-      // Create
-      newMappings.push({
-        id: Date.now().toString(),
-        adpId: editingAdpItem.id,
-        modelId: selectedModelId,
-        updatedAt: timestamp,
-        updatedBy: currentUser
-      });
+      newMappings.push(mappingData);
     }
 
     DataService.saveADPMappings(newMappings);
@@ -116,27 +143,38 @@ export const ADPMappingView: React.FC = () => {
   // Filter models based on selected make
   const availableModels = models.filter(m => m.makeId === selectedMakeId);
 
-  // Filter ADP List based on Date Range of their Mappings
+  // Filter ADP List based on Status and Date Range of their Mappings
   const filteredAdpList = adpList.filter(item => {
-    if (!dateFrom && !dateTo) return true;
-
     const mapping = getMappingForAdp(item.id);
-    
-    // If filtering by date, hide items that aren't mapped
-    if (!mapping || !mapping.updatedAt) return false;
+    const isMapped = !!mapping;
 
-    const mapDate = new Date(mapping.updatedAt);
-    
-    if (dateFrom) {
-      const start = new Date(dateFrom);
-      start.setHours(0,0,0,0);
-      if (mapDate < start) return false;
+    // Status Filter
+    if (statusFilter === 'mapped') {
+       if (!isMapped) return false;
+       if (mapping?.status === 'MISSING_MAKE' || mapping?.status === 'MISSING_MODEL') return false;
     }
-    
-    if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23,59,59,999);
-      if (mapDate > end) return false;
+    if (statusFilter === 'unmapped' && isMapped) return false;
+    if (statusFilter === 'issues') {
+      if (!isMapped) return false;
+      if (mapping?.status !== 'MISSING_MAKE' && mapping?.status !== 'MISSING_MODEL') return false;
+    }
+
+    // Date Range Filter
+    if (dateFrom || dateTo) {
+        if (!mapping || !mapping.updatedAt) return false;
+        const mapDate = new Date(mapping.updatedAt);
+        
+        if (dateFrom) {
+          const start = new Date(dateFrom);
+          start.setHours(0,0,0,0);
+          if (mapDate < start) return false;
+        }
+        
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23,59,59,999);
+          if (mapDate > end) return false;
+        }
     }
 
     return true;
@@ -150,7 +188,7 @@ export const ADPMappingView: React.FC = () => {
       'ADP Make ID', 'ADP Make En', 'ADP Make Ar',
       'ADP Model ID', 'ADP Model En', 'ADP Model Ar',
       'ADP Type ID', 'ADP Type En', 'ADP Type Ar',
-      'SD Make', 'SD Model', 'Status', 
+      'SD Make', 'SD Model', 'Status', 'Status Detail',
       'Updated By', 'Updated At', 'Reviewed By', 'Reviewed At'
     ];
     csvRows.push(headers.join(','));
@@ -164,19 +202,25 @@ export const ADPMappingView: React.FC = () => {
       const updatedByName = mapping?.updatedBy ? DataService.getUserName(mapping.updatedBy) : '';
       const reviewedByName = mapping?.reviewedBy ? DataService.getUserName(mapping.reviewedBy) : '';
       
+      let statusLabel = 'Unmapped';
+      if (isMapped) {
+        if (mapping?.status === 'MISSING_MAKE') statusLabel = 'Make Missing';
+        else if (mapping?.status === 'MISSING_MODEL') statusLabel = 'Model Missing';
+        else statusLabel = 'Mapped';
+      }
+
       const row = [
         adpItem.adpMakeId, adpItem.makeEnDesc, adpItem.makeArDesc,
         adpItem.adpModelId, adpItem.modelEnDesc, adpItem.modelArDesc,
         adpItem.adpTypeId, adpItem.typeEnDesc, adpItem.typeArDesc,
-        makeName, modelName, isMapped ? 'Mapped' : 'Unmapped',
+        makeName, modelName, isMapped ? 'Mapped' : 'Unmapped', statusLabel,
         updatedByName, mapping?.updatedAt || '', reviewedByName, mapping?.reviewedAt || ''
-      ].map(val => `"${String(val || '').replace(/"/g, '""')}"`); // Escape quotes and wrap in quotes
+      ].map(val => `"${String(val || '').replace(/"/g, '""')}"`);
 
       csvRows.push(row.join(','));
     });
 
     const csvContent = csvRows.join('\n');
-    // Add BOM for Excel UTF-8 compatibility
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -185,6 +229,38 @@ export const ADPMappingView: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const renderStatusBadge = (mapping?: ADPMapping) => {
+    if (!mapping) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+          <AlertCircle size={12} /> Unmapped
+        </span>
+      );
+    }
+
+    if (mapping.status === 'MISSING_MAKE') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+          <AlertTriangle size={12} /> Make Missing
+        </span>
+      );
+    }
+
+    if (mapping.status === 'MISSING_MODEL') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+          <HelpCircle size={12} /> Model Missing
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+        <CheckCircle2 size={12} /> Mapped
+      </span>
+    );
   };
 
   return (
@@ -196,13 +272,32 @@ export const ADPMappingView: React.FC = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
-          {/* Date Filter Toolbar */}
-          <div className="flex items-end gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+          {/* Filters Toolbar */}
+          <div className="flex items-end gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex-wrap">
              <div className="flex items-center gap-2 px-2 text-slate-400 text-sm">
                <Filter size={16} />
-               <span className="font-medium text-slate-600 hidden sm:inline">Updated:</span>
+               <span className="font-medium text-slate-600 hidden sm:inline">Filters:</span>
              </div>
-             <div className="w-32 sm:w-40">
+
+             {/* Status Filter */}
+             <div className="w-36">
+                <Select
+                  label=""
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as any)}
+                  options={[
+                    { value: 'all', label: 'All Status' },
+                    { value: 'mapped', label: 'Mapped Only' },
+                    { value: 'issues', label: 'Missing Data' },
+                    { value: 'unmapped', label: 'Unmapped' }
+                  ]}
+                  className="py-1.5 text-xs"
+                />
+             </div>
+             
+             <div className="hidden sm:block w-px h-8 bg-slate-200 mx-1"></div>
+
+             <div className="w-32 sm:w-36">
                 <Input 
                   label="" 
                   type="date" 
@@ -211,8 +306,8 @@ export const ADPMappingView: React.FC = () => {
                   onChange={e => setDateFrom(e.target.value)}
                 />
              </div>
-             <span className="text-slate-400 pb-2">-</span>
-             <div className="w-32 sm:w-40">
+             <span className="text-slate-400 pb-2 hidden sm:inline">-</span>
+             <div className="w-32 sm:w-36">
                 <Input 
                   label="" 
                   type="date" 
@@ -221,8 +316,12 @@ export const ADPMappingView: React.FC = () => {
                   onChange={e => setDateTo(e.target.value)}
                 />
              </div>
-             {(dateFrom || dateTo) && (
-               <button onClick={() => {setDateFrom(''); setDateTo('');}} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+             {(dateFrom || dateTo || statusFilter !== 'all') && (
+               <button 
+                  onClick={() => {setDateFrom(''); setDateTo(''); setStatusFilter('all');}} 
+                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  title="Clear Filters"
+               >
                  <X size={16} />
                </button>
              )}
@@ -273,32 +372,24 @@ export const ADPMappingView: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`font-medium ${isMapped ? 'text-slate-900' : 'text-slate-300'}`}>
+                      <span className={`font-medium ${isMapped && mapping?.status !== 'MISSING_MAKE' ? 'text-slate-900' : 'text-slate-300'}`}>
                         {makeName}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`font-medium ${isMapped ? 'text-slate-900' : 'text-slate-300'}`}>
+                      <span className={`font-medium ${isMapped && mapping?.status === 'MAPPED' ? 'text-slate-900' : 'text-slate-300'}`}>
                         {modelName}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {isMapped ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            <CheckCircle2 size={12} /> Mapped
-                          </span>
-                          {mapping?.updatedAt && (
-                             <span className="text-[10px] text-slate-400">
-                               {new Date(mapping.updatedAt).toLocaleDateString()}
-                             </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                          <AlertCircle size={12} /> Unmapped
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {renderStatusBadge(mapping)}
+                        {mapping?.updatedAt && (
+                           <span className="text-[10px] text-slate-400">
+                             {new Date(mapping.updatedAt).toLocaleDateString()}
+                           </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -334,7 +425,15 @@ export const ADPMappingView: React.FC = () => {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!selectedModelId}>Save Mapping</Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={
+                (mappingType === 'MAPPED' && !selectedModelId) || 
+                (mappingType === 'MISSING_MODEL' && !selectedMakeId)
+              }
+            >
+              Save Mapping
+            </Button>
           </>
         }
       >
@@ -357,33 +456,74 @@ export const ADPMappingView: React.FC = () => {
 
           <div className="space-y-4">
              <div className="p-4 border border-slate-200 rounded-lg space-y-4">
-                <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
                   <Link size={16} className="text-indigo-500" />
                   Map to SlashData Vehicle
                 </h4>
                 
-                <Select 
-                  label="Select SD Make"
-                  value={selectedMakeId}
-                  onChange={e => {
-                    setSelectedMakeId(e.target.value);
-                    setSelectedModelId(''); // Reset model when make changes
-                  }}
-                  options={makes.map(m => ({ value: m.id, label: m.name }))}
-                />
+                {/* Status Selection */}
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-lg mb-4">
+                   <button 
+                      onClick={() => setMappingType('MAPPED')}
+                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-all ${mappingType === 'MAPPED' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                   >
+                     Standard Map
+                   </button>
+                   <button 
+                      onClick={() => setMappingType('MISSING_MODEL')}
+                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-all ${mappingType === 'MISSING_MODEL' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                   >
+                     Model Missing
+                   </button>
+                   <button 
+                      onClick={() => setMappingType('MISSING_MAKE')}
+                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-all ${mappingType === 'MISSING_MAKE' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                   >
+                     Make Missing
+                   </button>
+                </div>
                 
-                <Select 
-                  label="Select SD Model"
-                  value={selectedModelId}
-                  onChange={e => setSelectedModelId(e.target.value)}
-                  options={availableModels.map(m => ({ value: m.id, label: m.name }))}
-                  disabled={!selectedMakeId}
-                />
-                
-                {selectedMakeId && availableModels.length === 0 && (
-                   <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                     No models found for this make. Please add models in the "Vehicle Models" section first.
-                   </p>
+                {/* Form Fields based on Type */}
+                {mappingType === 'MISSING_MAKE' ? (
+                  <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-red-800 flex items-start gap-2">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                    <p>This record will be flagged as <strong>Make Missing</strong>. Administrators can filter for these records to add the necessary Manufacturer data later.</p>
+                  </div>
+                ) : (
+                  <>
+                    <Select 
+                      label="Select SD Make"
+                      value={selectedMakeId}
+                      onChange={e => {
+                        setSelectedMakeId(e.target.value);
+                        setSelectedModelId(''); // Reset model when make changes
+                      }}
+                      options={makes.map(m => ({ value: m.id, label: m.name }))}
+                    />
+                    
+                    {mappingType === 'MAPPED' && (
+                      <Select 
+                        label="Select SD Model"
+                        value={selectedModelId}
+                        onChange={e => setSelectedModelId(e.target.value)}
+                        options={availableModels.map(m => ({ value: m.id, label: m.name }))}
+                        disabled={!selectedMakeId}
+                      />
+                    )}
+
+                    {mappingType === 'MISSING_MODEL' && (
+                      <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
+                         <HelpCircle size={16} className="mt-0.5 shrink-0" />
+                         <p>Select the Manufacturer above. The Model will be flagged as <strong>Missing</strong> in the system.</p>
+                      </div>
+                    )}
+                    
+                    {mappingType === 'MAPPED' && selectedMakeId && availableModels.length === 0 && (
+                       <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                         No models found for this make. Please add models in the "Vehicle Models" section or mark as "Model Missing".
+                       </p>
+                    )}
+                  </>
                 )}
              </div>
           </div>

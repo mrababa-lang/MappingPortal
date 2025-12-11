@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMapping, ADPMaster, Model, Make } from '../types';
-import { Card, Button, TableHeader, TableHead, TableRow, TableCell } from '../components/UI';
-import { CheckCircle2, Clock, UserCheck, ArrowRight } from 'lucide-react';
+import { Card, Button, TableHeader, TableHead, TableRow, TableCell, Select, Input } from '../components/UI';
+import { CheckCircle2, Clock, UserCheck, ArrowRight, AlertTriangle, HelpCircle, Filter, X } from 'lucide-react';
 
 export const MappingReviewView: React.FC = () => {
   const [reviews, setReviews] = useState<any[]>([]);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     refreshData();
@@ -20,15 +25,32 @@ export const MappingReviewView: React.FC = () => {
     // Combine data for display
     const reviewData = mappings.map(m => {
         const adp = adpMaster.find(a => a.id === m.adpId);
-        const model = models.find(mod => mod.id === m.modelId);
-        const make = model ? makes.find(mk => mk.id === model.makeId) : null;
+        let sdDesc = 'Unknown SD';
+        let statusIcon = null;
+
+        if (m.status === 'MISSING_MAKE') {
+            sdDesc = 'Make Missing';
+            statusIcon = <AlertTriangle size={14} className="text-red-500" />;
+        } else if (m.status === 'MISSING_MODEL') {
+            const make = m.makeId ? makes.find(mk => mk.id === m.makeId) : null;
+            sdDesc = make ? `${make.name} (Model Missing)` : 'Unknown Make (Model Missing)';
+            statusIcon = <HelpCircle size={14} className="text-amber-500" />;
+        } else {
+             // Standard Mapping
+             const model = m.modelId ? models.find(mod => mod.id === m.modelId) : null;
+             const make = model ? makes.find(mk => mk.id === model.makeId) : null;
+             sdDesc = model && make ? `${make.name} ${model.name}` : 'Unknown SD';
+        }
+
         const updatedByUser = m.updatedBy ? DataService.getUserName(m.updatedBy) : 'Unknown';
         const reviewedByUser = m.reviewedBy ? DataService.getUserName(m.reviewedBy) : null;
 
         return {
             ...m,
             adpDesc: adp ? `${adp.makeEnDesc} ${adp.modelEnDesc}` : 'Unknown ADP',
-            sdDesc: model && make ? `${make.name} ${model.name}` : 'Unknown SD',
+            adpDescAr: adp ? `${adp.makeArDesc} ${adp.modelArDesc}` : '',
+            sdDesc,
+            statusIcon,
             updatedByName: updatedByUser,
             reviewedByName: reviewedByUser
         };
@@ -60,12 +82,94 @@ export const MappingReviewView: React.FC = () => {
     refreshData();
   };
 
+  // Filter Logic
+  const filteredReviews = useMemo(() => {
+    return reviews.filter(item => {
+      // Status Filter
+      if (statusFilter === 'pending' && item.reviewedAt) return false;
+      if (statusFilter === 'reviewed' && !item.reviewedAt) return false;
+
+      // Date Range Filter (Using Updated At)
+      if (dateFrom || dateTo) {
+        if (!item.updatedAt) return false;
+        const itemDate = new Date(item.updatedAt);
+        
+        if (dateFrom) {
+          const start = new Date(dateFrom);
+          start.setHours(0,0,0,0);
+          if (itemDate < start) return false;
+        }
+        
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23,59,59,999);
+          if (itemDate > end) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [reviews, statusFilter, dateFrom, dateTo]);
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
            <h1 className="text-2xl font-bold text-slate-900">Mapping Review</h1>
            <p className="text-slate-500">Review recent mapping changes and approve updates.</p>
+        </div>
+
+        {/* Filters Toolbar */}
+        <div className="flex items-end gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex-wrap">
+             <div className="flex items-center gap-2 px-2 text-slate-400 text-sm">
+               <Filter size={16} />
+               <span className="font-medium text-slate-600 hidden sm:inline">Filters:</span>
+             </div>
+
+             <div className="w-36">
+                <Select
+                  label=""
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as any)}
+                  options={[
+                    { value: 'all', label: 'All Status' },
+                    { value: 'pending', label: 'Pending Review' },
+                    { value: 'reviewed', label: 'Reviewed' }
+                  ]}
+                  className="py-1.5 text-xs"
+                />
+             </div>
+             
+             <div className="hidden sm:block w-px h-8 bg-slate-200 mx-1"></div>
+
+             <div className="w-32 sm:w-36">
+                <Input 
+                  label="" 
+                  type="date" 
+                  className="py-1.5 text-xs" 
+                  value={dateFrom}
+                  onChange={e => setDateFrom(e.target.value)}
+                />
+             </div>
+             <span className="text-slate-400 pb-2 hidden sm:inline">-</span>
+             <div className="w-32 sm:w-36">
+                <Input 
+                  label="" 
+                  type="date" 
+                  className="py-1.5 text-xs"
+                  value={dateTo}
+                  onChange={e => setDateTo(e.target.value)}
+                />
+             </div>
+             {(dateFrom || dateTo || statusFilter !== 'all') && (
+               <button 
+                  onClick={() => {setDateFrom(''); setDateTo(''); setStatusFilter('all');}} 
+                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  title="Clear Filters"
+               >
+                 <X size={16} />
+               </button>
+             )}
         </div>
       </div>
 
@@ -81,7 +185,7 @@ export const MappingReviewView: React.FC = () => {
               <TableHead>Actions</TableHead>
             </TableHeader>
             <tbody>
-              {reviews.map(item => {
+              {filteredReviews.map(item => {
                 const isReviewed = !!item.reviewedAt;
                 
                 return (
@@ -98,11 +202,17 @@ export const MappingReviewView: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                        <span className="font-medium text-slate-700">{item.adpDesc}</span>
+                        <div className="flex flex-col">
+                            <span className="font-medium text-slate-700">{item.adpDesc}</span>
+                            {item.adpDescAr && (
+                                <span className="text-xs text-slate-500" dir="rtl">{item.adpDescAr}</span>
+                            )}
+                        </div>
                     </TableCell>
                     <TableCell>
                         <div className="flex items-center gap-2 text-indigo-600 font-medium">
                             <ArrowRight size={14} className="text-slate-300" />
+                            {item.statusIcon}
                             {item.sdDesc}
                         </div>
                     </TableCell>
@@ -135,10 +245,10 @@ export const MappingReviewView: React.FC = () => {
                   </TableRow>
                 );
               })}
-              {reviews.length === 0 && (
+              {filteredReviews.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                    No mapping activity found.
+                    No mapping activity found matching filters.
                   </td>
                 </tr>
               )}

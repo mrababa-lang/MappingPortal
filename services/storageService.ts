@@ -17,8 +17,8 @@ const getRecentDate = (hoursAgo: number) => {
 };
 
 const INITIAL_ADP_MAPPING: ADPMapping[] = [
-  { id: '1', modelId: '1', adpId: '1', updatedBy: '1', updatedAt: getRecentDate(2), reviewedAt: getRecentDate(1), reviewedBy: '1' }, // Reviewed
-  { id: '2', modelId: '3', adpId: '2', updatedBy: '2', updatedAt: getRecentDate(25) }, // Not reviewed
+  { id: '1', modelId: '1', adpId: '1', updatedBy: '1', updatedAt: getRecentDate(2), reviewedAt: getRecentDate(1), reviewedBy: '1', status: 'MAPPED' }, // Reviewed
+  { id: '2', modelId: '3', adpId: '2', updatedBy: '2', updatedAt: getRecentDate(25), status: 'MAPPED' }, // Not reviewed
 ];
 
 // Helpers

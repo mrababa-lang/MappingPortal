@@ -36,10 +36,17 @@ export interface ADPMaster {
   typeEnDesc: string;
 }
 
+export type MappingStatus = 'MAPPED' | 'MISSING_MAKE' | 'MISSING_MODEL';
+
 export interface ADPMapping {
   id: string;
-  modelId: string;
   adpId: string;
+  
+  // Mapping Details
+  modelId?: string; // Required if status is MAPPED
+  makeId?: string;  // Required if status is MISSING_MODEL (to capture the make at least)
+  status?: MappingStatus; // Defaults to 'MAPPED' if undefined
+
   updatedAt?: string;
   updatedBy?: string; // User ID
   reviewedAt?: string;
