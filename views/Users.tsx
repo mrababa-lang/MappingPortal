@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { User } from '../types';
-import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Select } from '../components/UI';
+import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Select, Pagination } from '../components/UI';
 import { Plus, Trash2, Edit2, UserCircle, Shield, CheckCircle2, XCircle } from 'lucide-react';
 
 export const UsersView: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   
   // Form State
   const [formData, setFormData] = useState<Partial<User>>({ 
@@ -63,6 +65,10 @@ export const UsersView: React.FC = () => {
     }
   };
 
+  // Pagination Logic
+  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  const paginatedUsers = users.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -87,7 +93,7 @@ export const UsersView: React.FC = () => {
               <TableHead>Actions</TableHead>
             </TableHeader>
             <tbody>
-              {users.map(user => (
+              {paginatedUsers.map(user => (
                 <TableRow key={user.id} onClick={() => handleOpenModal(user)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -135,6 +141,12 @@ export const UsersView: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={users.length}
+        />
       </Card>
 
       <Modal 

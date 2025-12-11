@@ -3,12 +3,15 @@ import React from 'react';
 export interface VehicleType {
   id: string;
   name: string;
+  nameAr?: string;
   description: string;
+  descriptionAr?: string;
 }
 
 export interface Make {
   id: string;
   name: string;
+  nameAr?: string;
   country: string;
   website?: string;
 }
@@ -18,6 +21,7 @@ export interface Model {
   makeId: string;
   typeId: string;
   name: string;
+  nameAr?: string;
 }
 
 export interface ADPMaster {
@@ -53,6 +57,12 @@ export interface ADPMapping {
   reviewedBy?: string; // User ID
 }
 
+export interface ADPMakeMapping {
+  adpMakeId: string;
+  sdMakeId: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -62,7 +72,7 @@ export interface User {
   lastActive: string;
 }
 
-export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-mapping' | 'mapping-review' | 'users' | 'tracking';
+export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-makes' | 'adp-mapping' | 'mapping-review' | 'users' | 'tracking';
 
 export interface NavItem {
   id: ViewState;

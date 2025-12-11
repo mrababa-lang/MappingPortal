@@ -1,23 +1,23 @@
 export const MOCK_DELAY = 400; // Simulate network latency
 
 export const INITIAL_TYPES = [
-  { id: '1', name: 'SUV', description: 'Sport Utility Vehicle suitable for off-road and towing.' },
-  { id: '2', name: 'Sedan', description: 'A passenger car with a separate trunk and three-box configuration.' },
-  { id: '3', name: 'Coupe', description: 'A car with a fixed roof and two doors.' },
-  { id: '4', name: 'Truck', description: 'A motor vehicle designed to transport cargo.' },
+  { id: '1', name: 'SUV', nameAr: 'سيارة دفع رباعي', description: 'Sport Utility Vehicle suitable for off-road and towing.', descriptionAr: 'سيارة رياضية متعددة الأغراض مناسبة للطرق الوعرة والقطر.' },
+  { id: '2', name: 'Sedan', nameAr: 'سيدان', description: 'A passenger car with a separate trunk and three-box configuration.', descriptionAr: 'سيارة ركاب ذات صندوق منفصل وتكوين ثلاثي الصناديق.' },
+  { id: '3', name: 'Coupe', nameAr: 'كوبيه', description: 'A car with a fixed roof and two doors.', descriptionAr: 'سيارة ذات سقف ثابت وبابين.' },
+  { id: '4', name: 'Truck', nameAr: 'شاحنة', description: 'A motor vehicle designed to transport cargo.', descriptionAr: 'مركبة آلية مصممة لنقل البضائع.' },
 ];
 
 export const INITIAL_MAKES = [
-  { id: '1', name: 'Toyota', country: 'Japan', website: 'toyota.com' },
-  { id: '2', name: 'Ford', country: 'USA', website: 'ford.com' },
-  { id: '3', name: 'BMW', country: 'Germany', website: 'bmw.com' },
+  { id: '1', name: 'Toyota', nameAr: 'تويوتا', country: 'Japan', website: 'toyota.com' },
+  { id: '2', name: 'Ford', nameAr: 'فورد', country: 'USA', website: 'ford.com' },
+  { id: '3', name: 'BMW', nameAr: 'بي ام دبليو', country: 'Germany', website: 'bmw.com' },
 ];
 
 export const INITIAL_MODELS = [
-  { id: '1', makeId: '1', typeId: '1', name: 'RAV4' },
-  { id: '2', makeId: '1', typeId: '2', name: 'Camry' },
-  { id: '3', makeId: '2', typeId: '4', name: 'F-150' },
-  { id: '4', makeId: '3', typeId: '2', name: '3 Series' },
+  { id: '1', makeId: '1', typeId: '1', name: 'RAV4', nameAr: 'راف فور' },
+  { id: '2', makeId: '1', typeId: '2', name: 'Camry', nameAr: 'كامري' },
+  { id: '3', makeId: '2', typeId: '4', name: 'F-150', nameAr: 'اف-١٥٠' },
+  { id: '4', makeId: '3', typeId: '2', name: '3 Series', nameAr: 'الفئة الثالثة' },
 ];
 
 export const INITIAL_ADP_MASTER = [

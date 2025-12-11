@@ -7,6 +7,7 @@ import { ModelsView } from './views/Models';
 import { TypesView } from './views/Types';
 import { ADPMasterView } from './views/ADPMaster';
 import { ADPMappingView } from './views/ADPMapping';
+import { ADPMakesView } from './views/ADPMakes';
 import { MappingReviewView } from './views/MappingReview';
 import { UsersView } from './views/Users';
 import { TrackingView } from './views/Tracking';
@@ -43,6 +44,8 @@ function App() {
         return <TypesView />;
       case 'adp-master':
         return <ADPMasterView />;
+      case 'adp-makes':
+        return <ADPMakesView />;
       case 'adp-mapping':
         return <ADPMappingView />;
       case 'mapping-review':

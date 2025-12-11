@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMapping, Model, ADPMaster, Make, MappingStatus } from '../types';
-import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input } from '../components/UI';
+import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, Pagination } from '../components/UI';
 import { Edit2, Link, Unlink, AlertCircle, CheckCircle2, Filter, X, Download, HelpCircle, AlertTriangle } from 'lucide-react';
 
 export const ADPMappingView: React.FC = () => {
@@ -12,6 +12,8 @@ export const ADPMappingView: React.FC = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAdpItem, setEditingAdpItem] = useState<ADPMaster | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   
   // Filters
   const [dateFrom, setDateFrom] = useState('');
@@ -26,6 +28,11 @@ export const ADPMappingView: React.FC = () => {
   useEffect(() => {
     refreshData();
   }, []);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFrom, dateTo, statusFilter]);
 
   const refreshData = () => {
     setAdpList(DataService.getADPMaster());
@@ -263,6 +270,10 @@ export const ADPMappingView: React.FC = () => {
     );
   };
 
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredAdpList.length / ITEMS_PER_PAGE);
+  const paginatedList = filteredAdpList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
@@ -347,7 +358,7 @@ export const ADPMappingView: React.FC = () => {
               <TableHead>Actions</TableHead>
             </TableHeader>
             <tbody>
-              {filteredAdpList.map(adpItem => {
+              {paginatedList.map(adpItem => {
                 const mapping = getMappingForAdp(adpItem.id);
                 const { makeName, modelName } = getSDModelDetails(mapping);
                 const isMapped = !!mapping;
@@ -416,6 +427,12 @@ export const ADPMappingView: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredAdpList.length}
+        />
       </Card>
 
       <Modal 

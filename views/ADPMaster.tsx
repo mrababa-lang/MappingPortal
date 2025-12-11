@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMaster } from '../types';
-import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea } from '../components/UI';
-import { Plus, Trash2, Edit2, Upload } from 'lucide-react';
+import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, Pagination } from '../components/UI';
+import { Plus, Trash2, Edit2, Upload, FileText } from 'lucide-react';
 
 export const ADPMasterView: React.FC = () => {
   const [adpList, setAdpList] = useState<ADPMaster[]>([]);
@@ -10,6 +10,8 @@ export const ADPMasterView: React.FC = () => {
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [bulkData, setBulkData] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   
   // Form State
   const [formData, setFormData] = useState<Partial<ADPMaster>>({ 
@@ -66,6 +68,18 @@ export const ADPMasterView: React.FC = () => {
     refreshData();
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setBulkData(content);
+    };
+    reader.readAsText(file);
+  };
+
   const handleBulkImport = () => {
     if (!bulkData.trim()) return;
     
@@ -110,6 +124,10 @@ export const ADPMasterView: React.FC = () => {
     }
   };
 
+  // Pagination Logic
+  const totalPages = Math.ceil(adpList.length / ITEMS_PER_PAGE);
+  const paginatedList = adpList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -139,7 +157,7 @@ export const ADPMasterView: React.FC = () => {
               <TableHead>Actions</TableHead>
             </TableHeader>
             <tbody>
-              {adpList.map(item => (
+              {paginatedList.map(item => (
                 <TableRow key={item.id} onClick={() => handleOpenModal(item)}>
                   <TableCell>
                     <div className="flex flex-col">
@@ -184,6 +202,12 @@ export const ADPMasterView: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={adpList.length}
+        />
       </Card>
 
       <Modal 
@@ -242,20 +266,34 @@ export const ADPMasterView: React.FC = () => {
           </>
         }
       >
-        <div className="space-y-4">
-          <div className="text-sm text-slate-600">
-             <div className="bg-slate-100 p-3 rounded border border-slate-200 font-mono text-xs overflow-x-auto whitespace-pre">
+        <div className="space-y-6">
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+             <div className="flex items-center gap-2 mb-3">
+               <FileText size={18} className="text-slate-500" />
+               <h4 className="font-semibold text-slate-700 text-sm">Upload CSV File</h4>
+             </div>
+             <input 
+               type="file" 
+               accept=".csv,.txt"
+               onChange={handleFileUpload}
+               className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-slate-700 file:shadow-sm hover:file:bg-slate-100 cursor-pointer"
+             />
+             <div className="mt-3 text-xs text-slate-500 font-mono bg-slate-100 p-2 rounded overflow-x-auto whitespace-pre">
               Order: MakeID, MakeEn, MakeAr, ModelID, ModelEn, ModelAr, TypeID, TypeEn, TypeAr<br/>
               Example: TOY,Toyota,تويوتا,CAM,Camry,كامري,SED,Sedan,سيدان
             </div>
           </div>
-          <TextArea 
-            label="CSV Data"
-            placeholder="Paste CSV data here..."
-            value={bulkData}
-            onChange={e => setBulkData(e.target.value)}
-            className="font-mono text-xs min-h-[200px]"
-          />
+          
+          <div className="relative border-t border-slate-200 pt-6">
+             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs font-medium text-slate-400">OR PASTE MANUALY</div>
+             <TextArea 
+                label="CSV Content"
+                placeholder="Paste CSV data here..."
+                value={bulkData}
+                onChange={e => setBulkData(e.target.value)}
+                className="font-mono text-xs min-h-[150px]"
+              />
+          </div>
         </div>
       </Modal>
     </div>

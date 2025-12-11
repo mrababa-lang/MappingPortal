@@ -5,15 +5,14 @@ import {
   Settings2, 
   Tags,
   Menu,
-  Bell,
-  Search,
   UserCircle,
   Database,
   Link,
   Users,
   PieChart,
   ClipboardCheck,
-  LogOut
+  LogOut,
+  Factory
 } from 'lucide-react';
 import { NavItem, ViewState } from '../types';
 
@@ -43,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "ADP",
     items: [
       { id: 'adp-master', label: 'ADP Master', icon: Database },
+      { id: 'adp-makes', label: 'ADP Makes', icon: Factory },
       { id: 'adp-mapping', label: 'ADP Mapping', icon: Link },
       { id: 'mapping-review', label: 'Mapping Review', icon: ClipboardCheck },
     ]
@@ -150,21 +150,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           </h2>
 
           <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-slash-red/20 transition-all">
-              <Search size={18} className="text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="bg-transparent border-none outline-none text-sm text-slate-700 w-48 placeholder:text-slate-400"
-              />
-            </div>
-            
-            <button className="relative p-2 text-slate-500 hover:text-slate-800 transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-slash-red rounded-full ring-2 ring-white"></span>
-            </button>
-            
-            <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
+            <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-900">Admin User</p>
                 <p className="text-xs text-slate-500">Super Admin</p>

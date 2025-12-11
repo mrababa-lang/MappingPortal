@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Loader2, Sparkles } from 'lucide-react';
+import { X, Loader2, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // --- Card ---
 export const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
@@ -154,3 +154,41 @@ export const TableCell: React.FC<{ children: React.ReactNode }> = ({ children })
     {children}
   </td>
 );
+
+// --- Pagination ---
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems: number;
+}
+
+export const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange, totalItems }) => {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+       <span className="text-xs text-slate-500">
+         Showing page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span> (<span className="font-medium">{totalItems}</span> items)
+       </span>
+       <div className="flex gap-2">
+         <Button 
+            variant="secondary" 
+            className="px-2 h-8 text-xs" 
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+         >
+           <ChevronLeft size={14} /> Previous
+         </Button>
+         <Button 
+            variant="secondary" 
+            className="px-2 h-8 text-xs"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+         >
+           Next <ChevronRight size={14} />
+         </Button>
+       </div>
+    </div>
+  );
+};

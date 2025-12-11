@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMapping, ADPMaster, Model, Make } from '../types';
-import { Card, Button, TableHeader, TableHead, TableRow, TableCell, Select, Input } from '../components/UI';
+import { Card, Button, TableHeader, TableHead, TableRow, TableCell, Select, Input, Pagination } from '../components/UI';
 import { CheckCircle2, Clock, UserCheck, ArrowRight, AlertTriangle, HelpCircle, Filter, X } from 'lucide-react';
 
 export const MappingReviewView: React.FC = () => {
@@ -11,10 +11,17 @@ export const MappingReviewView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     refreshData();
   }, []);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFrom, dateTo, statusFilter]);
 
   const refreshData = () => {
     const mappings = DataService.getADPMappings();
@@ -111,6 +118,10 @@ export const MappingReviewView: React.FC = () => {
     });
   }, [reviews, statusFilter, dateFrom, dateTo]);
 
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE);
+  const paginatedReviews = filteredReviews.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
@@ -185,7 +196,7 @@ export const MappingReviewView: React.FC = () => {
               <TableHead>Actions</TableHead>
             </TableHeader>
             <tbody>
-              {filteredReviews.map(item => {
+              {paginatedReviews.map(item => {
                 const isReviewed = !!item.reviewedAt;
                 
                 return (
@@ -255,6 +266,12 @@ export const MappingReviewView: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredReviews.length}
+        />
       </Card>
     </div>
   );

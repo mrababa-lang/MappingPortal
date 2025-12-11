@@ -1,4 +1,4 @@
-import { VehicleType, Make, Model, ADPMaster, ADPMapping, User } from '../types';
+import { VehicleType, Make, Model, ADPMaster, ADPMapping, User, ADPMakeMapping } from '../types';
 import { INITIAL_TYPES, INITIAL_MAKES, INITIAL_MODELS, INITIAL_ADP_MASTER, INITIAL_USERS } from '../constants';
 
 // Keys
@@ -7,6 +7,7 @@ const K_MAKES = 'slashdata_makes';
 const K_MODELS = 'slashdata_models';
 const K_ADP_MASTER = 'slashdata_adp_master';
 const K_ADP_MAPPING = 'slashdata_adp_mapping';
+const K_ADP_MAKE_MAPPING = 'slashdata_adp_make_mapping';
 const K_USERS = 'slashdata_users';
 
 // Helper to generate recent dates for mock data
@@ -48,6 +49,9 @@ export const DataService = {
   
   getADPMappings: (): ADPMapping[] => load(K_ADP_MAPPING, INITIAL_ADP_MAPPING),
   saveADPMappings: (data: ADPMapping[]) => save(K_ADP_MAPPING, data),
+
+  getADPMakeMappings: (): ADPMakeMapping[] => load(K_ADP_MAKE_MAPPING, []),
+  saveADPMakeMappings: (data: ADPMakeMapping[]) => save(K_ADP_MAKE_MAPPING, data),
 
   getUsers: (): User[] => load(K_USERS, INITIAL_USERS as User[]),
   saveUsers: (data: User[]) => save(K_USERS, data),
