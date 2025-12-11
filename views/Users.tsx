@@ -1,0 +1,190 @@
+import React, { useState, useEffect } from 'react';
+import { DataService } from '../services/storageService';
+import { User } from '../types';
+import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Select } from '../components/UI';
+import { Plus, Trash2, Edit2, UserCircle, Shield, CheckCircle2, XCircle } from 'lucide-react';
+
+export const UsersView: React.FC = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Form State
+  const [formData, setFormData] = useState<Partial<User>>({ 
+    name: '', email: '', role: 'Viewer', status: 'Active' 
+  });
+
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  const refreshData = () => {
+    setUsers(DataService.getUsers());
+  };
+
+  const handleOpenModal = (user?: User) => {
+    if (user) {
+      setEditingId(user.id);
+      setFormData(user);
+    } else {
+      setEditingId(null);
+      setFormData({ name: '', email: '', role: 'Viewer', status: 'Active' });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!formData.name || !formData.email) return;
+
+    if (editingId) {
+      const updated = users.map(u => u.id === editingId ? { ...u, ...formData } as User : u);
+      DataService.saveUsers(updated);
+    } else {
+      const newUser: User = {
+        id: Date.now().toString(),
+        name: formData.name!,
+        email: formData.email!,
+        role: formData.role! as 'Admin' | 'Editor' | 'Viewer',
+        status: formData.status! as 'Active' | 'Inactive',
+        lastActive: 'Just now'
+      };
+      DataService.saveUsers([...users, newUser]);
+    }
+    setIsModalOpen(false);
+    refreshData();
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to remove this user?")) {
+      const filtered = users.filter(u => u.id !== id);
+      DataService.saveUsers(filtered);
+      refreshData();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+           <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
+           <p className="text-slate-500">Manage system access and roles.</p>
+        </div>
+        <Button onClick={() => handleOpenModal()}>
+          <Plus size={18} />
+          Add User
+        </Button>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <TableHeader>
+              <TableHead>User</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Active</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableHeader>
+            <tbody>
+              {users.map(user => (
+                <TableRow key={user.id} onClick={() => handleOpenModal(user)}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                        <UserCircle size={20} />
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">{user.name}</div>
+                        <div className="text-xs text-slate-500">{user.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <Shield size={14} className="text-indigo-500" />
+                      {user.role}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {user.status === 'Active' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+                        <CheckCircle2 size={12} /> Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                        <XCircle size={12} /> Inactive
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-slate-500 text-sm">{user.lastActive}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" className="p-2 h-auto" onClick={(e) => { e.stopPropagation(); handleOpenModal(user); }}>
+                        <Edit2 size={16} />
+                      </Button>
+                      <Button variant="ghost" className="p-2 h-auto text-red-500 hover:bg-red-50 hover:text-red-600" onClick={(e) => handleDelete(user.id, e)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title={editingId ? 'Edit User' : 'Add New User'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave}>Save User</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input 
+            label="Full Name" 
+            value={formData.name} 
+            onChange={e => setFormData({...formData, name: e.target.value})}
+            placeholder="John Doe"
+          />
+          <Input 
+            label="Email Address" 
+            type="email"
+            value={formData.email} 
+            onChange={e => setFormData({...formData, email: e.target.value})}
+            placeholder="john@example.com"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Select 
+              label="Role"
+              value={formData.role}
+              onChange={e => setFormData({...formData, role: e.target.value as any})}
+              options={[
+                { value: 'Admin', label: 'Admin' },
+                { value: 'Editor', label: 'Editor' },
+                { value: 'Viewer', label: 'Viewer' }
+              ]}
+            />
+            <Select 
+              label="Status"
+              value={formData.status}
+              onChange={e => setFormData({...formData, status: e.target.value as any})}
+              options={[
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' }
+              ]}
+            />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};

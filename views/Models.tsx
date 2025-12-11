@@ -1,0 +1,294 @@
+import React, { useState, useEffect } from 'react';
+import { DataService } from '../services/storageService';
+import { suggestModels } from '../services/geminiService';
+import { Model, Make, VehicleType } from '../types';
+import { Card, Button, Input, Select, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea } from '../components/UI';
+import { Plus, Trash2, Edit2, Sparkles, Upload } from 'lucide-react';
+
+export const ModelsView: React.FC = () => {
+  const [models, setModels] = useState<Model[]>([]);
+  const [makes, setMakes] = useState<Make[]>([]);
+  const [types, setTypes] = useState<VehicleType[]>([]);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState<Partial<Model>>({ 
+    name: '', makeId: '', typeId: '' 
+  });
+  
+  // Bulk State
+  const [bulkData, setBulkData] = useState('');
+
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  const refreshData = () => {
+    setModels(DataService.getModels());
+    setMakes(DataService.getMakes());
+    setTypes(DataService.getTypes());
+  };
+
+  const handleOpenModal = (model?: Model) => {
+    setAiSuggestions([]);
+    if (model) {
+      setEditingId(model.id);
+      setFormData(model);
+    } else {
+      setEditingId(null);
+      setFormData({ name: '', makeId: '', typeId: '' });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!formData.name || !formData.makeId || !formData.typeId) return;
+
+    if (editingId) {
+      const updated = models.map(m => m.id === editingId ? { ...m, ...formData } as Model : m);
+      DataService.saveModels(updated);
+    } else {
+      const newModel: Model = {
+        id: Date.now().toString(),
+        name: formData.name!,
+        makeId: formData.makeId!,
+        typeId: formData.typeId!
+      };
+      DataService.saveModels([...models, newModel]);
+    }
+    setIsModalOpen(false);
+    refreshData();
+  };
+
+  const handleBulkImport = () => {
+    if (!bulkData.trim()) return;
+    
+    const lines = bulkData.split('\n');
+    const newModels: Model[] = [];
+    
+    lines.forEach(line => {
+      // CSV Format: Name, MakeName, TypeName
+      const parts = line.split(',');
+      if (parts.length < 3) return;
+      
+      const name = parts[0].trim();
+      const makeName = parts[1].trim();
+      const typeName = parts[2].trim();
+      
+      if (!name || !makeName || !typeName) return;
+      
+      // Resolve IDs (Case insensitive matching)
+      const make = makes.find(m => m.name.toLowerCase() === makeName.toLowerCase());
+      const type = types.find(t => t.name.toLowerCase() === typeName.toLowerCase());
+      
+      if (make && type) {
+        newModels.push({
+          id: Date.now() + Math.random().toString(),
+          name,
+          makeId: make.id,
+          typeId: type.id
+        });
+      }
+    });
+
+    if (newModels.length > 0) {
+      DataService.saveModels([...models, ...newModels]);
+      refreshData();
+      setIsBulkOpen(false);
+      setBulkData('');
+    } else {
+      alert("No valid models found. Please check your formatting and ensure Make/Type names exist.");
+    }
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Delete this model?")) {
+      const filtered = models.filter(m => m.id !== id);
+      DataService.saveModels(filtered);
+      refreshData();
+    }
+  };
+
+  const handleAISuggest = async () => {
+    const make = makes.find(m => m.id === formData.makeId);
+    if (!make) {
+      alert("Please select a Make first.");
+      return;
+    }
+    setIsSuggesting(true);
+    const suggestions = await suggestModels(make.name);
+    setAiSuggestions(suggestions);
+    setIsSuggesting(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+           <h1 className="text-2xl font-bold text-slate-900">Vehicle Models</h1>
+           <p className="text-slate-500">Specific models associated with makes.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
+            <Upload size={18} />
+            Bulk Import
+          </Button>
+          <Button onClick={() => handleOpenModal()}>
+            <Plus size={18} />
+            Add Model
+          </Button>
+        </div>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <TableHeader>
+              <TableHead>ID</TableHead>
+              <TableHead>Model Name</TableHead>
+              <TableHead>Make</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableHeader>
+            <tbody>
+              {models.map(model => (
+                <TableRow key={model.id} onClick={() => handleOpenModal(model)}>
+                  <TableCell>
+                    <span className="font-mono text-xs text-slate-400">{model.id}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-slate-900">{model.name}</div>
+                  </TableCell>
+                  <TableCell>
+                     <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                           {DataService.getMakeName(model.makeId).substring(0, 2).toUpperCase()}
+                        </span>
+                        {DataService.getMakeName(model.makeId)}
+                     </div>
+                  </TableCell>
+                  <TableCell>{DataService.getTypeName(model.typeId)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" className="p-2 h-auto" onClick={(e) => { e.stopPropagation(); handleOpenModal(model); }}>
+                        <Edit2 size={16} />
+                      </Button>
+                      <Button variant="ghost" className="p-2 h-auto text-red-500 hover:bg-red-50 hover:text-red-600" onClick={(e) => handleDelete(model.id, e)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Edit/Create Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title={editingId ? 'Edit Model' : 'Add New Model'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave}>Save Changes</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Select 
+            label="Manufacturer (Make)"
+            value={formData.makeId}
+            onChange={e => setFormData({...formData, makeId: e.target.value})}
+            options={makes.map(m => ({ value: m.id, label: m.name }))}
+          />
+          
+          <Select 
+            label="Vehicle Type"
+            value={formData.typeId}
+            onChange={e => setFormData({...formData, typeId: e.target.value})}
+            options={types.map(t => ({ value: t.id, label: t.name }))}
+          />
+
+          <div className="space-y-2">
+             <div className="flex items-end gap-2">
+               <div className="flex-1">
+                 <Input 
+                   label="Model Name" 
+                   value={formData.name} 
+                   onChange={e => setFormData({...formData, name: e.target.value})}
+                   placeholder="e.g. Corolla"
+                 />
+               </div>
+               <Button 
+                 variant="ai" 
+                 type="button"
+                 onClick={handleAISuggest} 
+                 isLoading={isSuggesting}
+                 className="mb-[1px]"
+                 title="Suggest popular models for selected Make"
+               >
+                 {isSuggesting ? 'Thinking...' : 'AI Suggest'}
+               </Button>
+             </div>
+             
+             {/* AI Suggestions Chips */}
+             {aiSuggestions.length > 0 && (
+               <div className="flex gap-2 flex-wrap animate-in fade-in slide-in-from-top-2">
+                 <span className="text-xs text-slate-400 flex items-center gap-1"><Sparkles size={10} /> Suggestions:</span>
+                 {aiSuggestions.map(s => (
+                   <button 
+                     key={s} 
+                     type="button"
+                     onClick={() => setFormData({...formData, name: s})}
+                     className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                   >
+                     {s}
+                   </button>
+                 ))}
+               </div>
+             )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Bulk Import Modal */}
+      <Modal
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
+        title="Bulk Import Models"
+        footer={
+          <>
+             <Button variant="secondary" onClick={() => setIsBulkOpen(false)}>Cancel</Button>
+             <Button onClick={handleBulkImport}>Import Models</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-slate-600">
+            <p className="mb-2">Paste your CSV data below. Ensure <strong>Make</strong> and <strong>Type</strong> names match existing entries exactly.</p>
+            <div className="bg-slate-100 p-3 rounded border border-slate-200 font-mono text-xs">
+              Format: Name, Make Name, Type Name<br/>
+              Example: Civic, Honda, Sedan
+            </div>
+          </div>
+          <TextArea 
+            label="CSV Data"
+            placeholder="Paste CSV data here..."
+            value={bulkData}
+            onChange={e => setBulkData(e.target.value)}
+            className="font-mono text-xs min-h-[200px]"
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+};
