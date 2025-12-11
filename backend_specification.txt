@@ -1,0 +1,99 @@
+# SlashData Vehicle Portal - Backend Specification
+
+## 1. Architecture Overview
+This document outlines the backend requirements to support the SlashData Vehicle Portal.
+- **Runtime**: Node.js with TypeScript (Recommended) or Python (FastAPI/Django).
+- **Database**: PostgreSQL (Schema defined in `database_schema.txt`).
+- **ORM**: Prisma / TypeORM (Node) or SQLAlchemy (Python).
+- **Authentication**: JSON Web Tokens (JWT).
+- **AI Integration**: Google Gemini API (Server-side proxy).
+
+## 2. Authentication & Security
+- **Endpoints**:
+  - `POST /api/auth/login`: Accepts email/password. Returns JWT access token + User info.
+- **Security Requirements**:
+  - Passwords must be hashed using **bcrypt** or **Argon2** before storage in the `Users` table.
+  - All API routes (except login) must require a valid `Authorization: Bearer <token>` header.
+  - **RBAC (Role-Based Access Control)** middleware must be implemented:
+    - `Admin`: Full access (User management, deletions, settings).
+    - `Editor`: Can edit mappings, vehicle data, and import files.
+    - `Viewer`: Read-only access to all views.
+
+## 3. API Endpoints
+
+### 3.1 User Management (Admin Only)
+- `GET /api/users`: List users.
+- `POST /api/users`: Create a new user (hash password on creation).
+- `PUT /api/users/:id`: Update user details/roles/status.
+- `DELETE /api/users/:id`: Soft delete or remove user.
+
+### 3.2 Vehicle Master Data
+- **Makes**
+  - `GET /api/makes`: List all makes.
+  - `POST /api/makes`: Create new make.
+  - `PUT /api/makes/:id`: Update make.
+  - `DELETE /api/makes/:id`: Delete make (Check for foreign key constraints in Models).
+  - `POST /api/makes/bulk`: Bulk import from CSV.
+- **Types**
+  - `GET /api/types`: List vehicle types.
+  - `POST /api/types`: Create type.
+  - `PUT /api/types/:id`: Update type.
+  - `POST /api/types/bulk`: Bulk import from CSV.
+- **Models**
+  - `GET /api/models`: List models (supports query param `?makeId=xyz`).
+  - `POST /api/models`: Create model.
+  - `PUT /api/models/:id`: Update model.
+  - `POST /api/models/bulk`: Bulk import from CSV (Requires resolving Make/Type names to IDs).
+
+### 3.3 ADP Integration
+- **Master Data (Raw)**
+  - `GET /api/adp/master`: Paginated list of raw ADP data.
+  - `POST /api/adp/master/bulk`: Bulk upload ADP CSV data.
+- **Mappings**
+  - `GET /api/adp/mappings`: List current mappings with status/date filters.
+  - `PUT /api/adp/mappings/:adpId`: Update mapping for a specific ADP record.
+    - **Payload**: `{ status: 'MAPPED'|'MISSING_MAKE'|'MISSING_MODEL', modelId?, makeId? }`
+    - **Logic**: Automatically sets `updated_at` = NOW() and `updated_by` = Current User ID.
+  - `POST /api/adp/mappings/:id/review`: Mark a mapping as reviewed. Sets `reviewed_at` and `reviewed_by`.
+- **Make Level Mapping**
+  - `GET /api/adp/makes/mappings`: Get unique ADP Make IDs and their corresponding SD Make IDs.
+  - `POST /api/adp/makes/mappings`: Create/Update a link between ADP Make ID and SD Make ID.
+    - **Logic**: Triggers the "Propagation Logic" described in Section 4.
+
+### 3.4 AI Services (Server-Side)
+To protect API keys, frontend should not call Gemini directly.
+- `POST /api/ai/generate-description`:
+  - Input: `{ name: string, context: 'type'|'model' }`
+  - Action: Calls Gemini API with prompts defined in `geminiService.ts`.
+  - Output: `{ description: string }`
+- `POST /api/ai/suggest-models`:
+  - Input: `{ makeName: string }`
+  - Action: Calls Gemini API to get JSON list.
+  - Output: `{ models: string[] }`
+
+## 4. Complex Business Logic Implementation
+
+### A. ADP Make Mapping Propagation
+*Scenario: User maps ADP Make "TOY" to SlashData Make "Toyota".*
+The backend endpoint `POST /api/adp/makes/mappings` must execute a transaction:
+1. **Upsert** the mapping into a `ADPMakeMappings` table (or similar config table).
+2. **Find Affected Records**: Query `ADPMaster` to find all records where `adp_make_id` = "TOY".
+3. **Update Mappings**: For every affected ADP ID in `ADPMappings`:
+   - If status is currently `MISSING_MAKE`: Update status to `MISSING_MODEL` and set `make_id` to the new SD Make ID.
+   - If status is `MISSING_MODEL`: Update `make_id` (correction).
+   - If record does not exist in `ADPMappings`: Insert new record with status `MISSING_MODEL` and set `make_id`.
+4. **Audit**: All auto-updated records should have `updated_by` set to the user performing the Make Mapping.
+
+### B. Bulk Import Validation
+*Scenario: Uploading CSVs for Models.*
+- The backend must accept `multipart/form-data`.
+- Parse CSV stream.
+- **Validation**:
+  - For Models CSV: Check if `Make Name` and `Type Name` exist in the database.
+  - If they exist, resolve them to UUIDs (`make_id`, `type_id`).
+  - If not, fail that row or (optionally) auto-create them based on configuration.
+- **Response**: Return a JSON summary `{ success_count: 50, error_count: 2, errors: [{row: 5, message: "Make 'Foo' not found"}] }`.
+
+### C. Activity Tracking
+- The `TrackingView` relies on filtering `ADPMappings` by `updated_at` and `updated_by`.
+- Ensure database indexes exists on `ADPMappings(updated_at)` and `ADPMappings(updated_by)` for performant analytics queries.
