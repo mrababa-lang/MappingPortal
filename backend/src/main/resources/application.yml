@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vehicle_portal
+    username: vehicle_portal
+    password: vehicle_portal
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+
+jwt:
+  secret: Y2hhbmdlbWUtcGxlYXNlLWtleS1zaG91bGQtYmUtMzJieXRlcy1taW5pbXVt
+  expiration-hours: 12
+
+server:
+  port: 8080
