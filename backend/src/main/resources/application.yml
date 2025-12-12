@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/vehicle_portal?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
-    username: vehicle_portal
-    password: vehicle_portal
+    url: jdbc:mysql://localhost:3306/MappingPortal?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: Test@123
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
