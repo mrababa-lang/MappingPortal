@@ -1,8 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize with empty key if missing to allow app to load, but API calls will fail gracefully
+const apiKey = process.env.API_KEY || '';
+const ai = new GoogleGenAI({ apiKey });
 
 export const generateDescription = async (itemName: string, context: string): Promise<string> => {
+  if (!apiKey) {
+    console.warn("Gemini API Key is missing.");
+    return `AI Description unavailable for ${itemName} (Missing API Key).`;
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -11,11 +18,16 @@ export const generateDescription = async (itemName: string, context: string): Pr
     return response.text?.trim() || "";
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Could not generate description at this time.";
+    return `AI Description unavailable for ${itemName}.`;
   }
 };
 
 export const suggestModels = async (makeName: string): Promise<string[]> => {
+  if (!apiKey) {
+    console.warn("Gemini API Key is missing.");
+    return [];
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
