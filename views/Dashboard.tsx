@@ -112,7 +112,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <h3 className="text-lg font-bold text-slate-800 mb-6">Mapping Activity Trend</h3>
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendData || []}>
+                  <LineChart data={Array.isArray(trendData) ? trendData : []}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} dy={10} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 12}} />
@@ -149,7 +149,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </h3>
              </div>
              <div className="flex-1 overflow-y-auto p-0">
-               {!recentActivity || recentActivity.length === 0 ? (
+               {!recentActivity || !Array.isArray(recentActivity) || recentActivity.length === 0 ? (
                  <div className="p-6 text-center text-slate-400 text-sm">No recent activity.</div>
                ) : (
                  <div className="divide-y divide-slate-50">

@@ -17,6 +17,22 @@ export interface ADPMappingQueryParams extends ADPQueryParams {
   userId?: string;
 }
 
+// Helper to normalize array responses
+const normalizeArray = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  if (data && Array.isArray(data.content)) return data.content;
+  return [];
+};
+
+// Helper to normalize object responses (unwrapping data.data if present)
+const normalizeObject = (data: any): any => {
+  if (data && data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  return data;
+};
+
 // --- MASTER DATA ---
 export const useADPMaster = (params: ADPQueryParams) => {
   return useQuery({
@@ -30,9 +46,10 @@ export const useADPMaster = (params: ADPQueryParams) => {
         } 
       });
       // Handle Spring Data Page structure if returned, or simple array
+      const content = normalizeArray(data.content || data);
       return {
-          content: data.content || data,
-          totalElements: data.totalElements || (data.length ? data.length : 0),
+          content: content,
+          totalElements: data.totalElements || (content.length ? content.length : 0),
           totalPages: data.totalPages || 1
       };
     },
@@ -92,7 +109,7 @@ export const useADPHistory = (adpId: string | null) => {
     queryFn: async () => {
       if (!adpId) return [];
       const { data } = await api.get(`/adp/history/${adpId}`);
-      return data;
+      return normalizeArray(data);
     },
     enabled: !!adpId
   });
@@ -128,9 +145,11 @@ export const useADPMappings = (params: ADPMappingQueryParams) => {
 
       const { data } = await api.get('/adp/mappings', { params: backendParams });
       
+      const content = normalizeArray(data.content || data);
+
       return {
-          content: data.content || data,
-          totalElements: data.totalElements || (data.length ? data.length : 0),
+          content: content,
+          totalElements: data.totalElements || (content.length ? content.length : 0),
           totalPages: data.totalPages || 1
       };
     },
@@ -193,10 +212,13 @@ export const useADPUniqueMakes = (params?: any) => {
                 size: params?.size || 20,
                 q: params?.q
             }});
+            
+            const content = normalizeArray(data.content || data);
+            
             return {
-                content: data.content || data,
+                content: content,
                 totalPages: data.totalPages || 1,
-                totalElements: data.totalElements || (data.length ? data.length : 0)
+                totalElements: data.totalElements || (content.length ? content.length : 0)
             }
         }
     })
@@ -224,10 +246,13 @@ export const useADPUniqueTypes = (params?: any) => {
                 size: params?.size || 20,
                 q: params?.q
             }});
+            
+            const content = normalizeArray(data.content || data);
+            
             return {
-                content: data.content || data,
+                content: content,
                 totalPages: data.totalPages || 1,
-                totalElements: data.totalElements || (data.length ? data.length : 0)
+                totalElements: data.totalElements || (content.length ? content.length : 0)
             }
         }
     })
@@ -252,7 +277,7 @@ export const useDashboardStats = () => {
     queryKey: ['stats'],
     queryFn: async () => {
       const { data } = await api.get('/stats/dashboard');
-      return data;
+      return normalizeObject(data);
     },
   });
 };
@@ -261,8 +286,8 @@ export const useActivityLog = () => {
     return useQuery({
         queryKey: ['activity'],
         queryFn: async () => {
-            const { data } = await api.get('/dashboard/activity').catch(() => ({ data: [] }));
-            return data;
+            const response = await api.get('/dashboard/activity').catch(() => ({ data: [] }));
+            return normalizeArray(response.data);
         }
     })
 }
@@ -271,8 +296,8 @@ export const useTrendStats = (from: string, to: string) => {
     return useQuery({
         queryKey: ['trends', from, to],
         queryFn: async () => {
-            const { data } = await api.get('/dashboard/trends', { params: { from, to } }).catch(() => ({ data: [] }));
-            return data;
+            const response = await api.get('/dashboard/trends', { params: { from, to } }).catch(() => ({ data: [] }));
+            return normalizeArray(response.data);
         }
     })
 }
