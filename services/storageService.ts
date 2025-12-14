@@ -1,4 +1,4 @@
-import { VehicleType, Make, Model, ADPMaster, ADPMapping, User, ADPMakeMapping, ADPHistoryEntry } from '../types';
+import { VehicleType, Make, Model, ADPMaster, ADPMapping, User, ADPMakeMapping, ADPHistoryEntry, AppConfig } from '../types';
 import { INITIAL_TYPES, INITIAL_MAKES, INITIAL_MODELS, INITIAL_ADP_MASTER, INITIAL_USERS } from '../constants';
 
 // Keys
@@ -9,6 +9,7 @@ const K_ADP_MASTER = 'slashdata_adp_master';
 const K_ADP_MAPPING = 'slashdata_adp_mapping';
 const K_ADP_MAKE_MAPPING = 'slashdata_adp_make_mapping';
 const K_USERS = 'slashdata_users';
+const K_CONFIG = 'slashdata_config';
 
 // Helper to generate recent dates for mock data
 const getRecentDate = (hoursAgo: number) => {
@@ -22,15 +23,22 @@ const INITIAL_ADP_MAPPING: ADPMapping[] = [
   { id: '2', modelId: '3', adpId: '2', updatedBy: '2', updatedAt: getRecentDate(25), status: 'MAPPED' }, // Not reviewed
 ];
 
+const INITIAL_CONFIG: AppConfig = {
+  enableAI: true,
+  aiConfidenceThreshold: 70,
+  maintenanceMode: false,
+  enableAuditLog: true
+};
+
 // Helpers
-const load = <T,>(key: string, initial: T[]): T[] => {
+const load = <T>(key: string, initial: T): T => {
   const saved = localStorage.getItem(key);
   if (saved) return JSON.parse(saved);
   localStorage.setItem(key, JSON.stringify(initial));
   return initial;
 };
 
-const save = <T,>(key: string, data: T[]) => {
+const save = <T>(key: string, data: T) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
@@ -50,11 +58,14 @@ export const DataService = {
   getADPMappings: (): ADPMapping[] => load(K_ADP_MAPPING, INITIAL_ADP_MAPPING),
   saveADPMappings: (data: ADPMapping[]) => save(K_ADP_MAPPING, data),
 
-  getADPMakeMappings: (): ADPMakeMapping[] => load(K_ADP_MAKE_MAPPING, []),
+  getADPMakeMappings: (): ADPMakeMapping[] => load(K_ADP_MAKE_MAPPING, [] as ADPMakeMapping[]),
   saveADPMakeMappings: (data: ADPMakeMapping[]) => save(K_ADP_MAKE_MAPPING, data),
 
   getUsers: (): User[] => load(K_USERS, INITIAL_USERS as User[]),
   saveUsers: (data: User[]) => save(K_USERS, data),
+
+  getAppConfig: (): AppConfig => load(K_CONFIG, INITIAL_CONFIG),
+  saveAppConfig: (data: AppConfig) => save(K_CONFIG, data),
   
   // Quick lookup helpers
   getMakeName: (id: string) => load(K_MAKES, INITIAL_MAKES).find(m => m.id === id)?.name || 'Unknown',
@@ -119,7 +130,7 @@ export const DataService = {
     const master = load(K_ADP_MASTER, INITIAL_ADP_MASTER);
     const makes = load(K_MAKES, INITIAL_MAKES);
     const models = load(K_MODELS, INITIAL_MODELS);
-    const users = load(K_USERS, INITIAL_USERS);
+    const users = load(K_USERS, INITIAL_USERS as User[]);
 
     return mappings
       .filter(m => m.updatedAt)

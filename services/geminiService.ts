@@ -5,7 +5,16 @@ import { DataService } from './storageService';
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
+const isAIEnabled = () => {
+  const config = DataService.getAppConfig();
+  return config.enableAI;
+};
+
 export const generateDescription = async (itemName: string, context: string): Promise<string> => {
+  if (!isAIEnabled()) {
+    return "AI generation is disabled in configuration.";
+  }
+  
   if (!apiKey) {
     console.warn("Gemini API Key is missing.");
     return `AI Description unavailable for ${itemName} (Missing API Key).`;
@@ -24,6 +33,10 @@ export const generateDescription = async (itemName: string, context: string): Pr
 };
 
 export const suggestModels = async (makeName: string): Promise<string[]> => {
+  if (!isAIEnabled()) {
+    return [];
+  }
+
   if (!apiKey) {
     console.warn("Gemini API Key is missing.");
     return [];
@@ -55,6 +68,10 @@ export const suggestModels = async (makeName: string): Promise<string[]> => {
 };
 
 export const suggestMapping = async (adpDescription: string): Promise<{ makeId?: string, modelId?: string, reasoning?: string } | null> => {
+  if (!isAIEnabled()) {
+    return null;
+  }
+
   if (!apiKey) {
     console.warn("Gemini API Key is missing.");
     return null;

@@ -82,7 +82,14 @@ export interface User {
   lastActive: string;
 }
 
-export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-makes' | 'adp-mapping' | 'mapping-review' | 'users' | 'tracking';
+export interface AppConfig {
+  enableAI: boolean;
+  aiConfidenceThreshold: number; // 0-100
+  maintenanceMode: boolean;
+  enableAuditLog: boolean;
+}
+
+export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-makes' | 'adp-mapping' | 'mapping-review' | 'users' | 'tracking' | 'configuration';
 
 export interface NavItem {
   id: ViewState;

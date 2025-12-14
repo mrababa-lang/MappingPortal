@@ -369,16 +369,18 @@ export const ModelsView: React.FC = () => {
                  />
                  {errors.name && <p className="text-red-500 text-xs mt-1 ml-1">{errors.name.message}</p>}
                </div>
-               <Button 
-                 variant="ai" 
-                 type="button"
-                 onClick={handleAISuggest} 
-                 isLoading={isSuggesting}
-                 className="mb-[1px]"
-                 title="Suggest popular models for selected Make"
-               >
-                 {isSuggesting ? 'Thinking...' : 'AI Suggest'}
-               </Button>
+               {DataService.getAppConfig().enableAI && (
+                 <Button 
+                   variant="ai" 
+                   type="button"
+                   onClick={handleAISuggest} 
+                   isLoading={isSuggesting}
+                   className="mb-[1px]"
+                   title="Suggest popular models for selected Make"
+                 >
+                   {isSuggesting ? 'Thinking...' : 'AI Suggest'}
+                 </Button>
+               )}
              </div>
              <Input 
                 label="Model Name (Ar)" 

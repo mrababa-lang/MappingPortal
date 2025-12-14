@@ -12,7 +12,8 @@ import {
   PieChart,
   ClipboardCheck,
   LogOut,
-  Factory
+  Factory,
+  Settings
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { NavItem, ViewState, User } from '../types';
@@ -54,6 +55,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'users', label: 'User Management', icon: Users },
       { id: 'tracking', label: 'Activity Tracking', icon: PieChart },
+      { id: 'configuration', label: 'Configuration', icon: Settings },
     ]
   }
 ];

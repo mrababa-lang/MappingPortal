@@ -11,6 +11,7 @@ import { ADPMakesView } from './views/ADPMakes';
 import { MappingReviewView } from './views/MappingReview';
 import { UsersView } from './views/Users';
 import { TrackingView } from './views/Tracking';
+import { ConfigurationView } from './views/Configuration';
 import { ViewState, User } from './types';
 
 function App() {
@@ -62,6 +63,8 @@ function App() {
         return <UsersView />;
       case 'tracking':
         return <TrackingView />;
+      case 'configuration':
+        return <ConfigurationView />;
       default:
         return <Dashboard onNavigate={handleNavigate} />;
     }

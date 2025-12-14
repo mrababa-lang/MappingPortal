@@ -314,16 +314,18 @@ export const TypesView: React.FC = () => {
             />
             {errors.description && <p className="text-red-500 text-xs mt-1 ml-1">{errors.description.message}</p>}
             <div className="absolute top-0 right-0">
-               <Button 
-                 variant="ai" 
-                 type="button" 
-                 onClick={handleAIGenerate} 
-                 isLoading={isGenerating}
-                 className="text-xs py-1 px-2 h-auto"
-                 title="Auto-generate description"
-               >
-                 AI Generate
-               </Button>
+               {DataService.getAppConfig().enableAI && (
+                 <Button 
+                   variant="ai" 
+                   type="button" 
+                   onClick={handleAIGenerate} 
+                   isLoading={isGenerating}
+                   className="text-xs py-1 px-2 h-auto"
+                   title="Auto-generate description"
+                 >
+                   AI Generate
+                 </Button>
+               )}
             </div>
           </div>
           <div>

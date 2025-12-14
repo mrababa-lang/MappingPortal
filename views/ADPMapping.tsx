@@ -588,15 +588,17 @@ export const ADPMappingView: React.FC<ADPMappingViewProps> = ({ initialParams })
             <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-4">
               <div className="flex justify-between items-start">
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Target ADP Vehicle</h4>
-                  <Button 
-                    variant="ai" 
-                    onClick={handleAISuggest} 
-                    isLoading={isSuggesting}
-                    className="text-xs py-1 h-7"
-                    title="Auto-suggest mapping"
-                  >
-                    AI Suggest
-                  </Button>
+                  {DataService.getAppConfig().enableAI && (
+                    <Button 
+                      variant="ai" 
+                      onClick={handleAISuggest} 
+                      isLoading={isSuggesting}
+                      className="text-xs py-1 h-7"
+                      title="Auto-suggest mapping"
+                    >
+                      AI Suggest
+                    </Button>
+                  )}
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
