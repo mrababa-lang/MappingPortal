@@ -26,7 +26,9 @@ export const useCreateMake = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (make: Partial<Make>) => {
-      const { data } = await api.post<Make>('/makes', make);
+      // Ensure ID is not sent for creation
+      const { id, ...payload } = make;
+      const { data } = await api.post<Make>('/makes', payload);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['makes'] }),
@@ -37,7 +39,6 @@ export const useUpdateMake = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (make: Make) => {
-      // Assuming PUT endpoint exists or using POST for update based on REST standards
       const { data } = await api.put<Make>(`/makes/${make.id}`, make);
       return data;
     },
@@ -64,8 +65,9 @@ export const useBulkImportMakes = () => {
     mutationFn: async (file: File) => {
        const formData = new FormData();
        formData.append('file', file);
+       // Content-Type must be undefined to let browser set the boundary
        await api.post('/makes/bulk', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': undefined }
        });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['makes'] }),
@@ -87,7 +89,9 @@ export const useCreateModel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (model: Partial<Model>) => {
-      const { data } = await api.post<Model>('/models', model);
+      // Ensure ID is not sent for creation; Backend generates it.
+      const { id, ...payload } = model;
+      const { data } = await api.post<Model>('/models', payload);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models'] }),
@@ -98,7 +102,6 @@ export const useUpdateModel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (model: Model) => {
-       // Assuming PUT based on standard REST
        const { data } = await api.put<Model>(`/models/${model.id}`, model);
        return data;
     },
@@ -122,8 +125,9 @@ export const useBulkImportModels = () => {
       mutationFn: async (file: File) => {
          const formData = new FormData();
          formData.append('file', file);
+         // Content-Type must be undefined to let browser set the boundary
          await api.post('/models/bulk', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': undefined }
          });
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models'] }),
@@ -135,7 +139,6 @@ export const useTypes = () => {
   return useQuery({
     queryKey: ['types'],
     queryFn: async () => {
-      // Assuming endpoint exists based on spec, though missing in simple Postman list
       const { data } = await api.get<VehicleType[]>('/types');
       return normalizeArray(data);
     }
@@ -146,7 +149,9 @@ export const useCreateType = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (type: Partial<VehicleType>) => {
-        const { data } = await api.post<VehicleType>('/types', type);
+        // Ensure ID is not sent for creation; Backend generates it.
+        const { id, ...payload } = type;
+        const { data } = await api.post<VehicleType>('/types', payload);
         return data;
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),
@@ -180,8 +185,9 @@ export const useBulkImportTypes = () => {
       mutationFn: async (file: File) => {
          const formData = new FormData();
          formData.append('file', file);
+         // Content-Type must be undefined to let browser set the boundary
          await api.post('/types/bulk', formData, {
-             headers: { 'Content-Type': 'multipart/form-data' }
+             headers: { 'Content-Type': undefined }
          });
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),

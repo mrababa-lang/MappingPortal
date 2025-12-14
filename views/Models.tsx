@@ -25,9 +25,29 @@ export const ModelsView: React.FC = () => {
 
   const { register, handleSubmit, reset } = useForm<Model>();
 
-  const handleOpenModal = (model?: Model) => {
+  // Helper to extract ID robustly from flat fields, nested objects, or snake_case
+  const getSafeId = (item: any, idField: string, nestedObjField?: string) => {
+      if (item[idField]) return item[idField];
+      if (nestedObjField && item[nestedObjField] && item[nestedObjField].id) return item[nestedObjField].id;
+      // Try snake case (e.g., makeId -> make_id)
+      const snake = idField.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      if (item[snake]) return item[snake];
+      return '';
+  };
+
+  const handleOpenModal = (model?: any) => {
     setEditingId(model?.id || null);
-    reset(model || { name: '', nameAr: '', makeId: '', typeId: '' });
+    
+    // Robustly find IDs for the form
+    const makeId = model ? getSafeId(model, 'makeId', 'make') : '';
+    const typeId = model ? getSafeId(model, 'typeId', 'type') : '';
+    
+    reset({
+        name: model?.name || '', 
+        nameAr: model?.nameAr || '', 
+        makeId: makeId, 
+        typeId: typeId 
+    });
     setIsModalOpen(true);
   };
 
@@ -55,6 +75,22 @@ export const ModelsView: React.FC = () => {
       }
   }
 
+  // Helper to display Make Name
+  const getMakeName = (model: any) => {
+      if (model.make?.name) return model.make.name;
+      const id = getSafeId(model, 'makeId', 'make');
+      // Use loose equality (==) to handle string/number mismatch
+      return makes.find(m => m.id == id)?.name || id || '-';
+  };
+
+  // Helper to display Type Name
+  const getTypeName = (model: any) => {
+      if (model.type?.name) return model.type.name;
+      if (model.vehicleType?.name) return model.vehicleType.name;
+      const id = getSafeId(model, 'typeId', 'type');
+      return types.find(t => t.id == id)?.name || id || '-';
+  };
+
   const filteredModels = models.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const paginated = filteredModels.slice((currentPage - 1) * 20, currentPage * 20);
 
@@ -75,6 +111,7 @@ export const ModelsView: React.FC = () => {
       <Card>
          <table className="w-full">
             <TableHeader>
+                <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Make</TableHead>
                 <TableHead>Type</TableHead>
@@ -83,9 +120,10 @@ export const ModelsView: React.FC = () => {
             <tbody>
                 {paginated.map(model => (
                     <TableRow key={model.id} onClick={() => handleOpenModal(model)}>
+                        <TableCell><span className="font-mono text-xs text-slate-400">{model.id}</span></TableCell>
                         <TableCell>{model.name}</TableCell>
-                        <TableCell>{makes.find(m => m.id === model.makeId)?.name || model.makeId}</TableCell>
-                        <TableCell>{types.find(t => t.id === model.typeId)?.name || model.typeId}</TableCell>
+                        <TableCell>{getMakeName(model)}</TableCell>
+                        <TableCell>{getTypeName(model)}</TableCell>
                         <TableCell>
                             <Button variant="ghost" onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}><Trash2 size={16} className="text-red-500"/></Button>
                         </TableCell>

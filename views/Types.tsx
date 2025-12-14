@@ -46,6 +46,7 @@ export const TypesView: React.FC = () => {
       <Card>
          <table className="w-full">
             <TableHeader>
+                <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Actions</TableHead>
@@ -53,6 +54,7 @@ export const TypesView: React.FC = () => {
             <tbody>
                 {types.map(type => (
                     <TableRow key={type.id} onClick={() => handleOpenModal(type)}>
+                        <TableCell><span className="font-mono text-xs text-slate-400">{type.id}</span></TableCell>
                         <TableCell>{type.name}</TableCell>
                         <TableCell>{type.description}</TableCell>
                         <TableCell>
