@@ -28,16 +28,25 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     
+    // We strictly avoid auto-logout here to allow users to save data or handle the error manually.
     if (status === 401) {
-      // Unauthorized: Clear session and redirect if needed
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-      window.location.href = '/'; // Simple redirect to login
-      toast.error('Session expired. Please login again.');
+      // Unauthorized (Invalid Token)
+      toast.error('Session invalid or expired. Please refresh or login again.');
     } else if (status === 403) {
-      toast.error('You do not have permission to perform this action.');
+      // Forbidden (Permission Issue)
+      toast.error('Access denied. You do not have permission to perform this action.');
+    } else if (status === 404) {
+      // Not Found
+      toast.error('The requested resource was not found.');
     } else if (status >= 500) {
+      // Server Error
       toast.error('Server error. Please try again later.');
+    } else if (!status) {
+      // Network Error (status is undefined)
+      toast.error('Network error. Unable to reach the server.');
+    } else {
+      // Other errors
+      toast.error(error.response?.data?.message || 'An unexpected error occurred.');
     }
     
     return Promise.reject(error);
