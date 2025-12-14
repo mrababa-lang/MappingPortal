@@ -76,20 +76,19 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
   const navGroups = useMemo(() => {
     if (!user) return [];
     
-    // Normalize role: handle "ROLE_ADMIN", "Admin", "admin", "Mapping_Admin", "Mapping Admin"
+    // Normalize role: handle "ROLE_ADMIN" prefix often sent by Spring Security
     let normalizedRole = (user.role || '').toString().toUpperCase();
     if (normalizedRole.startsWith('ROLE_')) {
       normalizedRole = normalizedRole.replace('ROLE_', '');
     }
-    normalizedRole = normalizedRole.replace('_', ' ').trim();
-
+    
     return ALL_NAV_GROUPS.map(group => {
       const filteredItems = group.items.filter(item => {
         // Admin: Access Everything
-        if (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER ADMIN') return true;
+        if (normalizedRole === 'ADMIN' || normalizedRole === 'SUPER_ADMIN') return true;
 
         // Mapping Admin
-        if (normalizedRole === 'MAPPING ADMIN') {
+        if (normalizedRole === 'MAPPING_ADMIN') {
           const allowedIds = [
             'dashboard', 'makes', 'models', 'types',
             'adp-master', 'adp-makes', 'adp-types', 'adp-mapping', 'mapping-review'
@@ -98,7 +97,7 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
         }
 
         // Mapping User
-        if (normalizedRole === 'MAPPING USER') {
+        if (normalizedRole === 'MAPPING_USER') {
            const allowedIds = [
              'dashboard',
              'adp-master', 'adp-makes', 'adp-types', 'adp-mapping'

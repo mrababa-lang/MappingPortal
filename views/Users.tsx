@@ -21,7 +21,7 @@ export const UsersView: React.FC = () => {
 
   const handleOpenModal = (user?: User) => {
     setEditingId(user?.id || null);
-    reset(user || { fullName: '', email: '', role: 'Mapping User', status: 'Active' });
+    reset(user || { fullName: '', email: '', role: 'MAPPING_USER', status: 'ACTIVE' });
     setIsModalOpen(true);
   };
 
@@ -77,14 +77,14 @@ export const UsersView: React.FC = () => {
                             </div>
                         </TableCell>
                         <TableCell>
-                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'Admin' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-700'}`}>
-                             {user.role}
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'ADMIN' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-700'}`}>
+                             {user.role === 'ADMIN' ? 'Admin' : user.role === 'MAPPING_ADMIN' ? 'Mapping Admin' : 'Mapping User'}
                            </span>
                         </TableCell>
                         <TableCell>
-                           <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                             <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
-                             {user.status}
+                           <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${user.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                             <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                             {user.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                            </span>
                         </TableCell>
                         <TableCell>
@@ -111,11 +111,11 @@ export const UsersView: React.FC = () => {
               <Input label="Email Address" type="email" {...register('email')} placeholder="john@slashdata.ae" />
               {!editingId && <Input label="Password" type="password" {...register('password')} placeholder="••••••••" />}
               <Select label="Role" {...register('role')} options={[
-                {value:'Admin', label:'Admin'}, 
-                {value:'Mapping Admin', label:'Mapping Admin'},
-                {value:'Mapping User', label:'Mapping User'}
+                {value:'ADMIN', label:'Admin'}, 
+                {value:'MAPPING_ADMIN', label:'Mapping Admin'},
+                {value:'MAPPING_USER', label:'Mapping User'}
               ]} />
-              <Select label="Status" {...register('status')} options={[{value:'Active', label:'Active'}, {value:'Inactive', label:'Inactive'}]} />
+              <Select label="Status" {...register('status')} options={[{value:'ACTIVE', label:'Active'}, {value:'INACTIVE', label:'Inactive'}]} />
           </div>
       </Modal>
     </div>

@@ -77,7 +77,7 @@ export interface ADPHistoryEntry {
   details: string;
 }
 
-export type UserRole = 'Admin' | 'Mapping Admin' | 'Mapping User';
+export type UserRole = 'ADMIN' | 'MAPPING_ADMIN' | 'MAPPING_USER';
 
 export interface User {
   id: string;
@@ -85,7 +85,7 @@ export interface User {
   email: string;
   password?: string;
   role: UserRole;
-  status: 'Active' | 'Inactive';
+  status: 'ACTIVE' | 'INACTIVE';
   lastActive: string;
 }
 
