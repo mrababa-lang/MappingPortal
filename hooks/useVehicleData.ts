@@ -2,14 +2,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { Make, Model, VehicleType } from '../types';
 
+// Helper to normalize array responses to handle { data: [...] } or direct [...]
+const normalizeArray = (data: any): any[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  if (data && Array.isArray(data.content)) return data.content;
+  return [];
+};
+
 // --- MAKES ---
 export const useMakes = () => {
   return useQuery({
     queryKey: ['makes'],
     queryFn: async () => {
       const { data } = await api.get<Make[]>('/makes');
-      return data;
+      return normalizeArray(data);
     },
+    initialData: []
   });
 };
 
@@ -69,8 +79,9 @@ export const useModels = () => {
     queryKey: ['models'],
     queryFn: async () => {
       const { data } = await api.get<Model[]>('/models');
-      return data;
+      return normalizeArray(data);
     },
+    initialData: []
   });
 };
 
@@ -128,8 +139,9 @@ export const useTypes = () => {
     queryFn: async () => {
       // Assuming endpoint exists based on spec, though missing in simple Postman list
       const { data } = await api.get<VehicleType[]>('/types');
-      return data;
+      return normalizeArray(data);
     },
+    initialData: []
   });
 };
 

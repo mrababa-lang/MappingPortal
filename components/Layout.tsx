@@ -122,11 +122,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
       >
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-slash-red to-rose-600 flex items-center justify-center font-bold text-white shrink-0">
-              F/
+            <div className="w-8 h-8 rounded bg-slash-red flex items-center justify-center font-bold text-white shrink-0">
+              S/
             </div>
             <span className={`font-bold text-lg tracking-tight transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
-              First Tech
+              SlashData
             </span>
           </div>
         </div>
@@ -149,7 +149,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
                       onClick={() => onNavigate(item.id)}
                       className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group
                         ${isActive 
-                          ? 'bg-gradient-to-r from-slash-red to-rose-600 text-white shadow-lg shadow-rose-900/20' 
+                          ? 'bg-slash-red text-white shadow-lg shadow-rose-900/20' 
                           : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                         }`}
                     >

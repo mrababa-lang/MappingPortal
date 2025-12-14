@@ -127,7 +127,7 @@ export const ADPMappingView: React.FC<{ initialParams?: any }> = ({ initialParam
                 label="Make" 
                 value={mappingState.makeId} 
                 onChange={v => setMappingState({...mappingState, makeId: v})} 
-                options={makes.map(m => ({value: m.id, label: m.name}))} 
+                options={(Array.isArray(makes) ? makes : []).map(m => ({value: m.id, label: m.name}))} 
              />
              
              {mappingState.status === 'MAPPED' && (
@@ -135,7 +135,7 @@ export const ADPMappingView: React.FC<{ initialParams?: any }> = ({ initialParam
                     label="Model" 
                     value={mappingState.modelId} 
                     onChange={v => setMappingState({...mappingState, modelId: v})} 
-                    options={models.filter(m => m.makeId === mappingState.makeId).map(m => ({value: m.id, label: m.name}))} 
+                    options={(Array.isArray(models) ? models : []).filter(m => m.makeId === mappingState.makeId).map(m => ({value: m.id, label: m.name}))} 
                  />
              )}
          </div>

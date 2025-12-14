@@ -19,6 +19,7 @@ export interface ADPMappingQueryParams extends ADPQueryParams {
 
 // Helper to normalize array responses
 const normalizeArray = (data: any): any[] => {
+  if (!data) return [];
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.data)) return data.data;
   if (data && Array.isArray(data.content)) return data.content;
@@ -53,6 +54,7 @@ export const useADPMaster = (params: ADPQueryParams) => {
           totalPages: data.totalPages || 1
       };
     },
+    initialData: { content: [], totalElements: 0, totalPages: 0 }
   });
 };
 
@@ -111,7 +113,8 @@ export const useADPHistory = (adpId: string | null) => {
       const { data } = await api.get(`/adp/history/${adpId}`);
       return normalizeArray(data);
     },
-    enabled: !!adpId
+    enabled: !!adpId,
+    initialData: []
   });
 };
 
@@ -153,6 +156,7 @@ export const useADPMappings = (params: ADPMappingQueryParams) => {
           totalPages: data.totalPages || 1
       };
     },
+    initialData: { content: [], totalElements: 0, totalPages: 0 }
   });
 };
 
@@ -220,7 +224,8 @@ export const useADPUniqueMakes = (params?: any) => {
                 totalPages: data.totalPages || 1,
                 totalElements: data.totalElements || (content.length ? content.length : 0)
             }
-        }
+        },
+        initialData: { content: [], totalElements: 0, totalPages: 0 }
     })
 }
 
@@ -254,7 +259,8 @@ export const useADPUniqueTypes = (params?: any) => {
                 totalPages: data.totalPages || 1,
                 totalElements: data.totalElements || (content.length ? content.length : 0)
             }
-        }
+        },
+        initialData: { content: [], totalElements: 0, totalPages: 0 }
     })
 }
 
@@ -288,7 +294,8 @@ export const useActivityLog = () => {
         queryFn: async () => {
             const response = await api.get('/dashboard/activity').catch(() => ({ data: [] }));
             return normalizeArray(response.data);
-        }
+        },
+        initialData: []
     })
 }
 
@@ -298,6 +305,7 @@ export const useTrendStats = (from: string, to: string) => {
         queryFn: async () => {
             const response = await api.get('/dashboard/trends', { params: { from, to } }).catch(() => ({ data: [] }));
             return normalizeArray(response.data);
-        }
+        },
+        initialData: []
     })
 }

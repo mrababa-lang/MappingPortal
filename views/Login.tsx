@@ -26,8 +26,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       }
 
       onLogin(user);
-      // Safe access using optional chaining
-      toast.success(`Welcome back, ${user?.fullName || 'User'}`);
+      
+      // Explicitly check properties before accessing
+      const welcomeName = (user && user.fullName) ? user.fullName : 'User';
+      toast.success(`Welcome back, ${welcomeName}`);
     } catch (error: any) {
       console.error("Login Error", error);
       toast.error(error.message || "Invalid credentials or server error.");
@@ -39,12 +41,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
-        <div className="bg-slate-900 px-8 py-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-slash-red to-rose-600 shadow-lg mb-6">
-            <span className="text-3xl font-bold text-white">F/</span>
+        <div className="bg-slate-900 px-8 py-10 text-center relative overflow-hidden">
+          {/* Decorative slash */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-slash-red opacity-10 transform translate-x-10 -translate-y-10 rotate-45"></div>
+          
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-slash-red shadow-lg mb-6 relative z-10">
+            <span className="text-3xl font-bold text-white">S/</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">First Tech Mapping Portal</h1>
-          <p className="text-slate-400 mt-2 text-sm">Vehicle Master Data Management</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight relative z-10">SlashData Portal</h1>
+          <p className="text-slate-400 mt-2 text-sm relative z-10">Vehicle Master Data Management</p>
         </div>
 
         <form onSubmit={handleLogin} className="p-8 space-y-6">
@@ -54,7 +59,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <Input 
                 label="Email Address" 
                 type="email" 
-                placeholder="admin@example.com"
+                placeholder="admin@slashdata.ae"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="pl-10"
@@ -77,7 +82,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <Button 
             type="submit" 
-            className="w-full py-3 text-base" 
+            className="w-full py-3 text-base bg-slash-red hover:bg-rose-700" 
             isLoading={isLoading}
           >
             Sign In <ArrowRight size={18} />
@@ -85,7 +90,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <div className="pt-4 border-t border-slate-100 text-center">
              <p className="text-xs text-slate-400">
-               Connects to Local Backend (Port 8080)
+               Secured by SlashData Identity
              </p>
           </div>
         </form>
