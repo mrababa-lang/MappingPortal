@@ -14,7 +14,8 @@ import {
   LogOut,
   Factory,
   Settings,
-  Shapes
+  Shapes,
+  ChevronRight
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { NavItem, User } from '../types';
@@ -33,30 +34,35 @@ interface NavGroup {
 // Map IDs to Routes
 const ALL_NAV_GROUPS: NavGroup[] = [
   {
-    title: "Vehicle Management",
+    title: "Overview",
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'makes', label: 'Vehicle Makes', icon: Car },
-      { id: 'models', label: 'Vehicle Models', icon: Settings2 },
-      { id: 'types', label: 'Vehicle Types', icon: Tags },
     ]
   },
   {
-    title: "ADP",
+    title: "Vehicle Master",
+    items: [
+      { id: 'makes', label: 'Makes', icon: Car },
+      { id: 'models', label: 'Models', icon: Settings2 },
+      { id: 'types', label: 'Types', icon: Tags },
+    ]
+  },
+  {
+    title: "ADP Integration",
     items: [
       { id: 'adp-master', label: 'ADP Master', icon: Database },
       { id: 'adp-makes', label: 'ADP Makes', icon: Factory },
       { id: 'adp-types', label: 'ADP Types', icon: Shapes },
-      { id: 'adp-mapping', label: 'ADP Mapping', icon: Link },
-      { id: 'mapping-review', label: 'Mapping Review', icon: ClipboardCheck },
+      { id: 'adp-mapping', label: 'Vehicle Mapping', icon: Link },
+      { id: 'mapping-review', label: 'Review Queue', icon: ClipboardCheck },
     ]
   },
   {
-    title: "Administration",
+    title: "System",
     items: [
-      { id: 'users', label: 'User Management', icon: Users },
-      { id: 'tracking', label: 'Activity Tracking', icon: PieChart },
-      { id: 'configuration', label: 'Configuration', icon: Settings },
+      { id: 'users', label: 'Users', icon: Users },
+      { id: 'tracking', label: 'Audit Log', icon: PieChart },
+      { id: 'configuration', label: 'Settings', icon: Settings },
     ]
   }
 ];
@@ -69,17 +75,14 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
   // Filter Navigation based on Roles
   const navGroups = useMemo(() => {
     if (!user) return [];
-
-    // Normalize role to handle API case differences (e.g. "ADMIN" vs "Admin")
     const normalizedRole = (user.role || '').toString().toUpperCase().replace('_', ' ');
 
     return ALL_NAV_GROUPS.map(group => {
       const filteredItems = group.items.filter(item => {
-        
-        // 1. Admin: Access Everything
+        // Admin: Access Everything
         if (normalizedRole === 'ADMIN') return true;
 
-        // 2. Mapping Admin
+        // Mapping Admin
         if (normalizedRole === 'MAPPING ADMIN') {
           const allowedIds = [
             'dashboard', 'makes', 'models', 'types',
@@ -88,7 +91,7 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
           return allowedIds.includes(item.id);
         }
 
-        // 3. Mapping User
+        // Mapping User
         if (normalizedRole === 'MAPPING USER') {
            const allowedIds = [
              'dashboard',
@@ -96,20 +99,16 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
            ];
            return allowedIds.includes(item.id);
         }
-
         return false;
       });
-
       return { ...group, items: filteredItems };
     }).filter(group => group.items.length > 0);
   }, [user]);
 
-  // Determine active view based on path
   const currentPath = location.pathname.substring(1) || 'dashboard';
 
   const getCurrentLabel = () => {
     for (const group of ALL_NAV_GROUPS) {
-      // Simple matching: item.id matches start of path
       const found = group.items.find(i => currentPath.startsWith(i.id));
       if (found) return found.label;
     }
@@ -122,25 +121,28 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
       
       {/* Sidebar */}
       <aside 
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} 
-          bg-slate-900 text-white transition-all duration-300 flex flex-col shadow-2xl z-20`}
+        className={`${sidebarOpen ? 'w-72' : 'w-20'} 
+          bg-slate-900 text-slate-300 transition-all duration-300 ease-in-out flex flex-col shadow-2xl z-30 relative`}
       >
-        <div className="h-16 flex items-center px-6 border-b border-slate-800">
+        {/* Brand */}
+        <div className="h-20 flex items-center px-6 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-            <div className="w-8 h-8 rounded bg-slash-red flex items-center justify-center font-bold text-white shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-slash-red flex items-center justify-center font-bold text-white shrink-0 shadow-lg shadow-rose-900/50">
               S/
             </div>
-            <span className={`font-bold text-lg tracking-tight transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
-              SlashData
-            </span>
+            <div className={`flex flex-col transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+              <span className="font-bold text-white text-lg tracking-tight leading-none">SlashData</span>
+              <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-1">Vehicle Portal</span>
+            </div>
           </div>
         </div>
 
-        <nav className="flex-1 py-6 px-3 space-y-6 overflow-y-auto">
+        {/* Nav */}
+        <nav className="flex-1 py-6 px-4 space-y-8 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
           {navGroups.map((group, groupIdx) => (
             <div key={groupIdx}>
               {group.title && (
-                <div className={`px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+                <div className={`px-2 mb-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
                   {group.title}
                 </div>
               )}
@@ -152,16 +154,24 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
                     <button
                       key={item.id}
                       onClick={() => navigate(`/${item.id}`)}
-                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative
                         ${isActive 
                           ? 'bg-slash-red text-white shadow-lg shadow-rose-900/20' 
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                          : 'hover:bg-slate-800 hover:text-white'
                         }`}
                     >
-                      <Icon size={20} className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
-                      <span className={`font-medium whitespace-nowrap transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+                      <Icon size={20} className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'} transition-colors`} />
+                      <span className={`font-medium text-sm whitespace-nowrap transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
                         {item.label}
                       </span>
+                      {isActive && sidebarOpen && (
+                        <ChevronRight size={14} className="ml-auto opacity-50" />
+                      )}
+                      {!sidebarOpen && (
+                         <div className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none z-50 whitespace-nowrap">
+                           {item.label}
+                         </div>
+                      )}
                     </button>
                   );
                 })}
@@ -170,51 +180,52 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 mt-auto">
+        {/* Footer Toggle & Logout */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950 mt-auto">
            <button 
              onClick={() => setSidebarOpen(!sidebarOpen)}
-             className="w-full flex items-center justify-center p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors mb-2"
+             className="w-full flex items-center justify-center p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors mb-4 border border-slate-800"
            >
-             <Menu size={20} />
+             <Menu size={16} />
            </button>
+           
            {onLogout && (
-             <button 
-               onClick={onLogout}
-               className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors group"
-             >
-               <div className="w-8 flex justify-center"><LogOut size={20} /></div>
-               <span className={`font-medium whitespace-nowrap transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
-                 Sign Out
-               </span>
-             </button>
+             <div className={`flex items-center gap-3 px-2 transition-all duration-200 ${!sidebarOpen ? 'justify-center' : ''}`}>
+               <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
+                 <UserCircle size={20} />
+               </div>
+               <div className={`overflow-hidden transition-all duration-200 ${sidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 hidden'}`}>
+                 <div className="text-xs font-medium text-white truncate max-w-[120px]">{user?.fullName || 'User'}</div>
+                 <button onClick={onLogout} className="text-[10px] text-slash-red hover:underline flex items-center gap-1 mt-0.5">
+                   <LogOut size={10} /> Sign out
+                 </button>
+               </div>
+             </div>
            )}
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10">
-          <h2 className="text-xl font-bold text-slate-800 capitalize tracking-tight">
-            {getCurrentLabel()}
-          </h2>
+      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-20">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 capitalize tracking-tight flex items-center gap-2">
+              {getCurrentLabel()}
+            </h2>
+          </div>
 
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900">{user?.fullName || 'User'}</p>
-                <p className="text-xs text-slate-500">{user?.role || 'Guest'}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
-                <UserCircle size={28} />
-              </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full border border-slate-200">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+               <span className="text-xs font-medium text-slate-600">System Operational</span>
             </div>
           </div>
         </header>
 
         {/* Scrollable View Area */}
-        <main className="flex-1 overflow-auto p-8">
-          <div className="max-w-7xl mx-auto animate-in fade-in duration-500 slide-in-from-bottom-4">
+        <main className="flex-1 overflow-auto p-8 relative scroll-smooth">
+          <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
              <Outlet />
           </div>
         </main>
