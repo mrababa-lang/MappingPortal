@@ -72,6 +72,7 @@ export interface ADPHistoryEntry {
   adpId: string;
   timestamp: string;
   userId: string;
+  userFullName?: string;
   action: 'CREATED' | 'UPDATED' | 'REVIEWED' | 'REJECTED';
   details: string;
 }
@@ -80,7 +81,7 @@ export type UserRole = 'Admin' | 'Mapping Admin' | 'Mapping User';
 
 export interface User {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
   password?: string;
   role: UserRole;

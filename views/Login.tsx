@@ -21,7 +21,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     try {
       const user = await AuthService.login(email, password);
       onLogin(user);
-      toast.success(`Welcome back, ${user.name}`);
+      toast.success(`Welcome back, ${user.fullName}`);
     } catch (error) {
       console.error("Login Error", error);
       toast.error("Invalid credentials or server error.");

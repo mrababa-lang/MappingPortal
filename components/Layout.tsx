@@ -197,7 +197,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900">{user?.name || 'User'}</p>
+                <p className="text-sm font-semibold text-slate-900">{user?.fullName || 'User'}</p>
                 <p className="text-xs text-slate-500">{user?.role || 'Guest'}</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">

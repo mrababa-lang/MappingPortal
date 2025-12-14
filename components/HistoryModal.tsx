@@ -59,7 +59,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, adp
                   <div className="flex items-center gap-1.5 mt-1">
                     <UserCircle size={12} className="text-slate-400" />
                     <span className="text-xs text-slate-500">
-                      {entry.userName || entry.userId}
+                      {entry.fullName || entry.userId}
                     </span>
                   </div>
                 </div>

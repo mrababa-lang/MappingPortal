@@ -41,7 +41,7 @@ export const TrackingView: React.FC = () => {
                 label="By User"
                 value={selectedUser}
                 onChange={e => { setSelectedUser(e.target.value); setPage(1); }}
-                options={users.map(u => ({ value: u.id, label: u.name }))}
+                options={users.map(u => ({ value: u.id, label: u.fullName }))}
                 className="bg-white"
              />
           </div>
@@ -110,7 +110,7 @@ export const TrackingView: React.FC = () => {
                                          </span>
                                      </TableCell>
                                      <TableCell>
-                                         <div className="text-sm">{user?.name || m.updatedBy || 'System'}</div>
+                                         <div className="text-sm">{user?.fullName || m.updatedBy || 'System'}</div>
                                      </TableCell>
                                      <TableCell>
                                          <div className="text-xs text-slate-500">{m.updatedAt ? new Date(m.updatedAt).toLocaleString() : '-'}</div>

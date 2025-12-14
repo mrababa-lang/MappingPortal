@@ -18,7 +18,7 @@ export const UsersView: React.FC = () => {
 
   const handleOpenModal = (user?: User) => {
     setEditingId(user?.id || null);
-    reset(user || { name: '', email: '', role: 'Mapping User', status: 'Active' });
+    reset(user || { fullName: '', email: '', role: 'Mapping User', status: 'Active' });
     setIsModalOpen(true);
   };
 
@@ -58,7 +58,7 @@ export const UsersView: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <UserCircle className="text-slate-400" />
                                 <div>
-                                    <div className="font-medium">{user.name}</div>
+                                    <div className="font-medium">{user.fullName}</div>
                                     <div className="text-xs text-slate-500">{user.email}</div>
                                 </div>
                             </div>
@@ -76,7 +76,7 @@ export const UsersView: React.FC = () => {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit' : 'Add'} footer={<Button onClick={handleSubmit(onSubmit)}>Save</Button>}>
           <div className="space-y-4">
-              <Input label="Name" {...register('name')} />
+              <Input label="Full Name" {...register('fullName')} />
               <Input label="Email" type="email" {...register('email')} />
               {!editingId && <Input label="Password" type="password" {...register('password')} />}
               <Select label="Role" {...register('role')} options={[{value:'Admin', label:'Admin'}, {value:'Mapping User', label:'Mapping User'}]} />
