@@ -1,110 +1,103 @@
 
 -- Database Schema for SlashData Vehicle Portal
+-- Database: MySQL 8.0+
 -- ---------------------------------------------------------
 
 -- 1. Users Table
--- Stores user accounts, roles, and status for access control.
 CREATE TABLE Users (
-    id VARCHAR(50) PRIMARY KEY, -- UUID recommended
+    id VARCHAR(36) PRIMARY KEY, -- UUID
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL, -- Hashed
-    role VARCHAR(20) CHECK (role IN ('Admin', 'Mapping Admin', 'Mapping User')),
-    status VARCHAR(20) CHECK (status IN ('Active', 'Inactive')),
-    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    password VARCHAR(255) NOT NULL, -- BCrypt Hash
+    role VARCHAR(20) NOT NULL, -- Enum handled by app logic or CHECK
+    status VARCHAR(20) DEFAULT 'Active',
+    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_user_role CHECK (role IN ('Admin', 'Mapping Admin', 'Mapping User')),
+    CONSTRAINT chk_user_status CHECK (status IN ('Active', 'Inactive'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 2. Vehicle Types Table
--- Classification (e.g., SUV, Sedan).
 CREATE TABLE VehicleTypes (
-    id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
-    name_ar VARCHAR(100), -- Arabic Name
+    name_ar VARCHAR(100),
     description TEXT,
-    description_ar TEXT -- Arabic Description
-);
+    description_ar TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. Makes Table
--- Manufacturers (e.g., Toyota).
 CREATE TABLE Makes (
-    id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
-    name_ar VARCHAR(100) -- Arabic Name
-);
+    name_ar VARCHAR(100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Models Table
--- Models linked to Make and Type.
 CREATE TABLE Models (
-    id VARCHAR(50) PRIMARY KEY,
-    make_id VARCHAR(50) NOT NULL,
-    type_id VARCHAR(50) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    make_id VARCHAR(36) NOT NULL,
+    type_id VARCHAR(36) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    name_ar VARCHAR(100), -- Arabic Name
+    name_ar VARCHAR(100),
     FOREIGN KEY (make_id) REFERENCES Makes(id) ON DELETE CASCADE,
     FOREIGN KEY (type_id) REFERENCES VehicleTypes(id) ON DELETE RESTRICT,
     CONSTRAINT uc_models_make_name UNIQUE (make_id, name)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. ADP Master Data Table
--- Raw import from external system.
 CREATE TABLE ADPMaster (
-    id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     adp_make_id VARCHAR(50),
     make_en_desc VARCHAR(200),
-    make_ar_desc NVARCHAR(200),
+    make_ar_desc VARCHAR(200),
     adp_model_id VARCHAR(50),
     model_en_desc VARCHAR(200),
-    model_ar_desc NVARCHAR(200),
+    model_ar_desc VARCHAR(200),
     adp_type_id VARCHAR(50),
     type_en_desc VARCHAR(200),
-    type_ar_desc NVARCHAR(200)
-);
+    type_ar_desc VARCHAR(200)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. ADP Mappings Table
--- The core mapping logic. Links ADP Master ID to SlashData Models/Makes.
--- NOTE: Records in this table represent "Proposed" or "Approved" mappings.
--- If a mapping is Rejected, the record is DELETED from this table, reverting the ADP item to "Unmapped".
+-- Records represent "Proposed" or "Approved" mappings.
+-- Rejection deletes the record.
 CREATE TABLE ADPMappings (
-    id VARCHAR(50) PRIMARY KEY,
-    adp_id VARCHAR(50) NOT NULL UNIQUE, -- 1-to-1 with ADPMaster
+    id VARCHAR(36) PRIMARY KEY,
+    adp_id VARCHAR(36) NOT NULL UNIQUE,
     
     -- Mapping Targets
-    status VARCHAR(50) DEFAULT 'MAPPED' CHECK (status IN ('MAPPED', 'MISSING_MAKE', 'MISSING_MODEL')),
-    model_id VARCHAR(50), -- Populated if MAPPED
-    make_id VARCHAR(50),  -- Populated if MISSING_MODEL (partial map)
+    status VARCHAR(50) DEFAULT 'MAPPED',
+    model_id VARCHAR(36), -- Populated if MAPPED
+    make_id VARCHAR(36),  -- Populated if MISSING_MODEL
     
     -- Audit & Review Workflow
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_by VARCHAR(50),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by VARCHAR(36),
     
-    -- Review Columns: NULL means "Pending Review". NOT NULL means "Approved".
-    reviewed_at TIMESTAMP, 
-    reviewed_by VARCHAR(50),
+    -- Review Columns: NULL = Pending, NOT NULL = Approved
+    reviewed_at TIMESTAMP NULL DEFAULT NULL, 
+    reviewed_by VARCHAR(36) DEFAULT NULL,
 
     -- Constraints
+    CONSTRAINT chk_map_status CHECK (status IN ('MAPPED', 'MISSING_MAKE', 'MISSING_MODEL')),
     FOREIGN KEY (adp_id) REFERENCES ADPMaster(id) ON DELETE CASCADE,
     FOREIGN KEY (model_id) REFERENCES Models(id) ON DELETE SET NULL,
     FOREIGN KEY (make_id) REFERENCES Makes(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES Users(id) ON DELETE SET NULL,
     FOREIGN KEY (reviewed_by) REFERENCES Users(id) ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. ADP Make Mappings Table
--- Global rules for mapping ADP Make Codes to SD Makes.
 CREATE TABLE ADPMakeMappings (
     adp_make_id VARCHAR(50) NOT NULL PRIMARY KEY,
-    sd_make_id VARCHAR(50) NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sd_make_id VARCHAR(36) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (sd_make_id) REFERENCES Makes(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Indexes for Performance
--- Optimize Model lookups
 CREATE INDEX idx_models_make ON Models(make_id);
-
--- Optimize Mapping Filtering
 CREATE INDEX idx_adp_mapping_status ON ADPMappings(status);
 CREATE INDEX idx_adp_mapping_updated ON ADPMappings(updated_at);
-
--- Optimize Review Workflow (Finding Pending vs Reviewed)
-CREATE INDEX idx_adp_mapping_review ON ADPMappings(reviewed_at) WHERE reviewed_at IS NULL;
+-- Review workflow index: fast lookup of pending items
+CREATE INDEX idx_adp_mapping_pending ON ADPMappings(reviewed_at);
