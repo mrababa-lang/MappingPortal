@@ -93,11 +93,9 @@ export const useBulkImportADPMaster = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (file: File) => {
-         const formData = new FormData();
-         formData.append('file', file);
-         // Content-Type must be undefined to let browser set the boundary
-         await api.post('/adp/master/upload', formData, {
-             headers: { 'Content-Type': undefined }
+         const content = await file.text();
+         await api.post('/adp/master/upload', content, {
+             headers: { 'Content-Type': 'text/csv' }
          });
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adpMaster'] }),

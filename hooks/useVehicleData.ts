@@ -63,11 +63,10 @@ export const useBulkImportMakes = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (file: File) => {
-       const formData = new FormData();
-       formData.append('file', file);
-       // Content-Type must be undefined to let browser set the boundary
-       await api.post('/makes/bulk', formData, {
-          headers: { 'Content-Type': undefined }
+       // Send raw CSV text as the backend does not support multipart/form-data
+       const content = await file.text();
+       await api.post('/makes/bulk', content, {
+          headers: { 'Content-Type': 'text/csv' }
        });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['makes'] }),
@@ -123,11 +122,9 @@ export const useBulkImportModels = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (file: File) => {
-         const formData = new FormData();
-         formData.append('file', file);
-         // Content-Type must be undefined to let browser set the boundary
-         await api.post('/models/bulk', formData, {
-            headers: { 'Content-Type': undefined }
+         const content = await file.text();
+         await api.post('/models/bulk', content, {
+            headers: { 'Content-Type': 'text/csv' }
          });
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models'] }),
@@ -183,11 +180,9 @@ export const useBulkImportTypes = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (file: File) => {
-         const formData = new FormData();
-         formData.append('file', file);
-         // Content-Type must be undefined to let browser set the boundary
-         await api.post('/types/bulk', formData, {
-             headers: { 'Content-Type': undefined }
+         const content = await file.text();
+         await api.post('/types/bulk', content, {
+             headers: { 'Content-Type': 'text/csv' }
          });
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),
