@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { generateDescription } from '../services/geminiService';
 import { VehicleType } from '../types';
-import { Card, Button, Input, TextArea, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination } from '../components/UI';
+import { Card, Button, Input, TextArea, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, InfoTooltip } from '../components/UI';
 import { Plus, Trash2, Edit2, Upload, FileText, Search, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -194,11 +194,14 @@ export const TypesView: React.FC = () => {
            <h1 className="text-2xl font-bold text-slate-900">Vehicle Types</h1>
            <p className="text-slate-500">Classifications for vehicle body styles.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
-            <Upload size={18} />
-            Bulk Import
-          </Button>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+             <InfoTooltip text="CSV Columns: Name, Description" />
+             <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
+               <Upload size={18} />
+               Bulk Import
+             </Button>
+          </div>
           <Button onClick={() => handleOpenModal()}>
             <Plus size={18} />
             Add Type

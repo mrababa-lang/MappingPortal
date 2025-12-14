@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Make, VehicleType } from '../types';
-import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, Pagination, Select } from '../components/UI';
+import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, Pagination, Select, InfoTooltip } from '../components/UI';
 import { Plus, Trash2, Edit2, Upload, FileText, Search, AlertTriangle, Loader2, Filter, X } from 'lucide-react';
 import { useMakes, useModels, useTypes, useCreateMake, useUpdateMake, useDeleteMake, useBulkImportMakes } from '../hooks/useVehicleData';
 import { toast } from 'sonner';
@@ -220,11 +220,14 @@ export const MakesView: React.FC = () => {
            <h1 className="text-2xl font-bold text-slate-900">Vehicle Makes</h1>
            <p className="text-slate-500">Manage manufacturers in English and Arabic.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
-            <Upload size={18} />
-            Bulk Import
-          </Button>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+             <InfoTooltip text="CSV Columns: Name (En), Name (Ar)" />
+             <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
+               <Upload size={18} />
+               Bulk Import
+             </Button>
+          </div>
           <Button onClick={() => handleOpenModal()}>
             <Plus size={18} />
             Add Make

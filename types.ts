@@ -61,6 +61,12 @@ export interface ADPMakeMapping {
   updatedAt: string;
 }
 
+export interface ADPTypeMapping {
+  adpTypeId: string;
+  sdTypeId: string;
+  updatedAt: string;
+}
+
 export interface ADPHistoryEntry {
   id: string;
   adpId: string;
@@ -90,7 +96,7 @@ export interface AppConfig {
   enableAuditLog: boolean;
 }
 
-export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-makes' | 'adp-mapping' | 'mapping-review' | 'users' | 'tracking' | 'configuration';
+export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-makes' | 'adp-types' | 'adp-mapping' | 'mapping-review' | 'users' | 'tracking' | 'configuration';
 
 export interface NavItem {
   id: ViewState;

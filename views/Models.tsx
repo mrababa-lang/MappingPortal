@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { suggestModels } from '../services/geminiService';
 import { Model, Make, VehicleType } from '../types';
-import { Card, Button, Input, Select, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, Pagination } from '../components/UI';
+import { Card, Button, Input, Select, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, Pagination, InfoTooltip } from '../components/UI';
 import { Plus, Trash2, Edit2, Sparkles, Upload, FileText, Search, AlertCircle, AlertTriangle, Filter, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -252,11 +252,14 @@ export const ModelsView: React.FC = () => {
            <h1 className="text-2xl font-bold text-slate-900">Vehicle Models</h1>
            <p className="text-slate-500">Specific models associated with makes.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
-            <Upload size={18} />
-            Bulk Import
-          </Button>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+             <InfoTooltip text="CSV Columns: Name, Make Name, Type Name" />
+             <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
+               <Upload size={18} />
+               Bulk Import
+             </Button>
+          </div>
           <Button onClick={() => handleOpenModal()}>
             <Plus size={18} />
             Add Model

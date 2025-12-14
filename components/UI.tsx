@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Search, Check } from 'lucide-react';
+import { X, Loader2, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Info } from 'lucide-react';
 
 // --- Card ---
 export const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
@@ -54,6 +54,17 @@ export const Switch: React.FC<{ checked: boolean; onChange: (checked: boolean) =
       }`}
     />
   </button>
+);
+
+// --- Info Tooltip ---
+export const InfoTooltip: React.FC<{ text: React.ReactNode }> = ({ text }) => (
+  <div className="group relative flex items-center justify-center cursor-help text-slate-400 hover:text-indigo-500 transition-colors">
+    <Info size={18} />
+    <div className="absolute top-full mt-2 right-0 w-max max-w-[200px] px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none text-center leading-relaxed">
+      {text}
+      <div className="absolute bottom-full right-1.5 border-4 border-transparent border-b-slate-800"></div>
+    </div>
+  </div>
 );
 
 // --- Input ---

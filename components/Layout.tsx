@@ -13,7 +13,8 @@ import {
   ClipboardCheck,
   LogOut,
   Factory,
-  Settings
+  Settings,
+  Shapes
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { NavItem, ViewState, User } from '../types';
@@ -46,6 +47,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'adp-master', label: 'ADP Master', icon: Database },
       { id: 'adp-makes', label: 'ADP Makes', icon: Factory },
+      { id: 'adp-types', label: 'ADP Types', icon: Shapes },
       { id: 'adp-mapping', label: 'ADP Mapping', icon: Link },
       { id: 'mapping-review', label: 'Mapping Review', icon: ClipboardCheck },
     ]
@@ -79,7 +81,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
           // Allow Vehicle Management Group + ADP Group
           const allowedIds = [
             'dashboard', 'makes', 'models', 'types', // Vehicle Mgmt
-            'adp-master', 'adp-makes', 'adp-mapping', 'mapping-review' // ADP
+            'adp-master', 'adp-makes', 'adp-types', 'adp-mapping', 'mapping-review' // ADP
           ];
           return allowedIds.includes(item.id);
         }
@@ -88,7 +90,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, onNavigat
         if (user.role === 'Mapping User') {
            const allowedIds = [
              'dashboard', // Usually good to give them dashboard read-only
-             'adp-master', 'adp-makes', 'adp-mapping'
+             'adp-master', 'adp-makes', 'adp-types', 'adp-mapping'
            ];
            // Explicitly EXCLUDE mapping-review
            return allowedIds.includes(item.id);

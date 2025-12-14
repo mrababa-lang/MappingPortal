@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DataService } from '../services/storageService';
 import { ADPMaster } from '../types';
-import { Card, Button, Input, Modal, TextArea } from '../components/UI';
+import { Card, Button, Input, Modal, TextArea, InfoTooltip } from '../components/UI';
 import { Plus, Trash2, Edit2, Upload, FileText, Search, AlertTriangle } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -175,11 +175,14 @@ export const ADPMasterView: React.FC = () => {
            <h1 className="text-2xl font-bold text-slate-900">ADP Master List</h1>
            <p className="text-slate-500">Manage ADP Make, Model, and Type definitions.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
-            <Upload size={18} />
-            Bulk Upload
-          </Button>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+             <InfoTooltip text="Required: MakeID, MakeEn, MakeAr, ModelID, ModelEn, ModelAr, TypeID, TypeEn, TypeAr" />
+             <Button variant="secondary" onClick={() => setIsBulkOpen(true)}>
+               <Upload size={18} />
+               Bulk Upload
+             </Button>
+          </div>
           <Button onClick={() => handleOpenModal()}>
             <Plus size={18} />
             Add Entry

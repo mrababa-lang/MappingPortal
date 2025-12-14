@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { DataService } from '../services/storageService';
 import { suggestMapping } from '../services/geminiService';
+import { ExportService } from '../services/exportService';
 import { ADPMapping, Model, ADPMaster, Make, MappingStatus } from '../types';
 import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, Pagination, SearchableSelect } from '../components/UI';
-import { Edit2, Link, Unlink, AlertCircle, CheckCircle2, Filter, X, Download, HelpCircle, AlertTriangle, Search, History, Sparkles } from 'lucide-react';
+import { Edit2, Link, Unlink, AlertCircle, CheckCircle2, Filter, X, Download, HelpCircle, AlertTriangle, Search, History, Sparkles, FileBarChart, FileSpreadsheet, FileText } from 'lucide-react';
 import { HistoryModal } from '../components/HistoryModal';
 import { toast } from 'sonner';
 
@@ -34,6 +35,20 @@ export const ADPMappingView: React.FC<ADPMappingViewProps> = ({ initialParams })
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
+  // Export Modal State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportConfig, setExportConfig] = useState<{
+    mode: 'data' | 'report';
+    scope: 'filtered' | 'all';
+    format: 'xlsx' | 'csv' | 'pdf';
+    reportType: 'monthly' | 'weekly';
+  }>({
+    mode: 'data',
+    scope: 'filtered',
+    format: 'xlsx',
+    reportType: 'monthly'
+  });
+
   // Filters
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -286,26 +301,11 @@ export const ADPMappingView: React.FC<ADPMappingViewProps> = ({ initialParams })
     return true;
   });
 
-  const handleExport = () => {
-    const csvRows = [];
-    
-    // Define Headers
-    const headers = [
-      'ADP Make ID', 'ADP Make En', 'ADP Make Ar',
-      'ADP Model ID', 'ADP Model En', 'ADP Model Ar',
-      'ADP Type ID', 'ADP Type En', 'ADP Type Ar',
-      'SD Make ID', 'SD Make', 'SD Model ID', 'SD Model', 
-      'Status', 'Status Detail',
-      'Updated By', 'Updated At', 'Reviewed By', 'Reviewed At'
-    ];
-    csvRows.push(headers.join(','));
-
-    // Generate Data Rows based on filtered list
-    filteredAdpList.forEach(adpItem => {
+  const prepareExportData = (items: ADPMaster[]) => {
+    return items.map(adpItem => {
       const mapping = getMappingForAdp(adpItem.id);
       const { makeName, modelName, makeId, modelId } = getSDModelDetails(mapping);
       const isMapped = !!mapping;
-      
       const updatedByName = mapping?.updatedBy ? DataService.getUserName(mapping.updatedBy) : '';
       const reviewedByName = mapping?.reviewedBy ? DataService.getUserName(mapping.reviewedBy) : '';
       
@@ -316,27 +316,52 @@ export const ADPMappingView: React.FC<ADPMappingViewProps> = ({ initialParams })
         else statusLabel = 'Mapped';
       }
 
-      const row = [
-        adpItem.adpMakeId, adpItem.makeEnDesc, adpItem.makeArDesc,
-        adpItem.adpModelId, adpItem.modelEnDesc, adpItem.modelArDesc,
-        adpItem.adpTypeId, adpItem.typeEnDesc, adpItem.typeArDesc,
-        makeId, makeName, modelId, modelName, 
-        isMapped ? 'Mapped' : 'Unmapped', statusLabel,
-        updatedByName, mapping?.updatedAt || '', reviewedByName, mapping?.reviewedAt || ''
-      ].map(val => `"${String(val || '').replace(/"/g, '""')}"`);
-
-      csvRows.push(row.join(','));
+      return {
+        'ADP Make ID': adpItem.adpMakeId,
+        'ADP Make En': adpItem.makeEnDesc,
+        'ADP Make Ar': adpItem.makeArDesc,
+        'ADP Model ID': adpItem.adpModelId,
+        'ADP Model En': adpItem.modelEnDesc,
+        'ADP Model Ar': adpItem.modelArDesc,
+        'ADP Type ID': adpItem.adpTypeId,
+        'ADP Type En': adpItem.typeEnDesc,
+        'ADP Type Ar': adpItem.typeArDesc,
+        'SD Make ID': makeId,
+        'SD Make': makeName,
+        'SD Model ID': modelId,
+        'SD Model': modelName,
+        'Status': isMapped ? 'Mapped' : 'Unmapped',
+        'Status Detail': statusLabel,
+        'Updated By': updatedByName,
+        'Updated At': mapping?.updatedAt || '',
+        'Reviewed By': reviewedByName,
+        'Reviewed At': mapping?.reviewedAt || ''
+      };
     });
+  };
 
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `adp_mapping_export_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportSubmit = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    
+    if (exportConfig.mode === 'report') {
+        // Report Generation (Summary)
+        ExportService.generateSummaryReport(mappings, exportConfig.reportType, `mapping_summary_${timestamp}`);
+        toast.success("Report generated.");
+    } else {
+        // Data Export
+        let dataToExport = [];
+        
+        if (exportConfig.scope === 'filtered') {
+            dataToExport = prepareExportData(filteredAdpList);
+        } else {
+            // All Data (Refresh master list just in case)
+            dataToExport = prepareExportData(DataService.getADPMaster());
+        }
+
+        ExportService.exportData(dataToExport, `adp_mapping_${exportConfig.scope}_${timestamp}`, exportConfig.format);
+        toast.success("Export started.");
+    }
+    setIsExportModalOpen(false);
   };
 
   const renderStatusBadge = (mapping?: ADPMapping) => {
@@ -440,7 +465,7 @@ export const ADPMappingView: React.FC<ADPMappingViewProps> = ({ initialParams })
               )}
             </div>
 
-            <Button variant="secondary" onClick={handleExport} className="h-[52px] sm:h-[58px] self-stretch flex items-center shadow-sm">
+            <Button variant="secondary" onClick={() => setIsExportModalOpen(true)} className="h-[52px] sm:h-[58px] self-stretch flex items-center shadow-sm">
               <Download size={18} />
               Export
             </Button>
@@ -563,6 +588,127 @@ export const ADPMappingView: React.FC<ADPMappingViewProps> = ({ initialParams })
           totalItems={filteredAdpList.length}
         />
       </Card>
+
+      {/* Export Options Modal */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Export Data"
+        footer={
+          <>
+             <Button variant="secondary" onClick={() => setIsExportModalOpen(false)}>Cancel</Button>
+             <Button onClick={handleExportSubmit} className="flex gap-2">
+               <Download size={18} />
+               {exportConfig.mode === 'data' ? 'Export Data' : 'Generate Report'}
+             </Button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+           <div className="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-lg">
+             <button 
+               onClick={() => setExportConfig({ ...exportConfig, mode: 'data' })}
+               className={`py-2 text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all ${exportConfig.mode === 'data' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+             >
+                <FileSpreadsheet size={16} /> Data Export
+             </button>
+             <button 
+               onClick={() => setExportConfig({ ...exportConfig, mode: 'report' })}
+               className={`py-2 text-sm font-medium rounded-md flex items-center justify-center gap-2 transition-all ${exportConfig.mode === 'report' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+             >
+                <FileBarChart size={16} /> Summary Report
+             </button>
+           </div>
+
+           {exportConfig.mode === 'data' ? (
+             <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="space-y-2">
+                   <h4 className="text-sm font-semibold text-slate-700">Data Source</h4>
+                   <div className="grid grid-cols-1 gap-2">
+                      <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${exportConfig.scope === 'filtered' ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                         <input 
+                           type="radio" 
+                           name="scope" 
+                           checked={exportConfig.scope === 'filtered'} 
+                           onChange={() => setExportConfig({...exportConfig, scope: 'filtered'})}
+                           className="text-indigo-600 focus:ring-indigo-500"
+                         />
+                         <div className="flex-1">
+                            <span className="block text-sm font-medium text-slate-900">Current Filtered Results</span>
+                            <span className="block text-xs text-slate-500">Exports only the {filteredAdpList.length} records matching your current search/filters.</span>
+                         </div>
+                      </label>
+                      <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${exportConfig.scope === 'all' ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                         <input 
+                           type="radio" 
+                           name="scope" 
+                           checked={exportConfig.scope === 'all'} 
+                           onChange={() => setExportConfig({...exportConfig, scope: 'all'})}
+                           className="text-indigo-600 focus:ring-indigo-500"
+                         />
+                         <div className="flex-1">
+                            <span className="block text-sm font-medium text-slate-900">All Master Data</span>
+                            <span className="block text-xs text-slate-500">Exports the entire dataset ({adpList.length} records) regardless of filters.</span>
+                         </div>
+                      </label>
+                   </div>
+                </div>
+
+                <div className="space-y-2">
+                   <h4 className="text-sm font-semibold text-slate-700">Format</h4>
+                   <div className="flex gap-3">
+                     <button 
+                       onClick={() => setExportConfig({...exportConfig, format: 'xlsx'})}
+                       className={`flex-1 py-3 px-2 border rounded-lg text-sm font-medium flex flex-col items-center gap-1 ${exportConfig.format === 'xlsx' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                     >
+                       <FileSpreadsheet size={20} className={exportConfig.format === 'xlsx' ? 'text-emerald-500' : 'text-slate-400'} />
+                       Excel (.xlsx)
+                     </button>
+                     <button 
+                       onClick={() => setExportConfig({...exportConfig, format: 'csv'})}
+                       className={`flex-1 py-3 px-2 border rounded-lg text-sm font-medium flex flex-col items-center gap-1 ${exportConfig.format === 'csv' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                     >
+                       <FileText size={20} className={exportConfig.format === 'csv' ? 'text-blue-500' : 'text-slate-400'} />
+                       CSV
+                     </button>
+                     <button 
+                       onClick={() => setExportConfig({...exportConfig, format: 'pdf'})}
+                       className={`flex-1 py-3 px-2 border rounded-lg text-sm font-medium flex flex-col items-center gap-1 ${exportConfig.format === 'pdf' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                     >
+                       <FileText size={20} className={exportConfig.format === 'pdf' ? 'text-red-500' : 'text-slate-400'} />
+                       PDF
+                     </button>
+                   </div>
+                </div>
+             </div>
+           ) : (
+             <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex gap-3">
+                   <FileBarChart className="text-indigo-600 shrink-0" size={24} />
+                   <div>
+                     <h4 className="text-sm font-bold text-indigo-900">Summary Report</h4>
+                     <p className="text-xs text-indigo-700 mt-1">
+                       Generates a PDF summary of mapping progress, including total counts, success rates, and issues over time.
+                     </p>
+                   </div>
+                </div>
+                
+                <div className="space-y-2">
+                   <h4 className="text-sm font-semibold text-slate-700">Report Interval</h4>
+                   <Select 
+                     label=""
+                     value={exportConfig.reportType}
+                     onChange={e => setExportConfig({...exportConfig, reportType: e.target.value as any})}
+                     options={[
+                       { value: 'monthly', label: 'Monthly Summary' },
+                       { value: 'weekly', label: 'Weekly Summary' }
+                     ]}
+                   />
+                </div>
+             </div>
+           )}
+        </div>
+      </Modal>
 
       <Modal 
         isOpen={isModalOpen} 

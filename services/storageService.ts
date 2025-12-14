@@ -1,4 +1,4 @@
-import { VehicleType, Make, Model, ADPMaster, ADPMapping, User, ADPMakeMapping, ADPHistoryEntry, AppConfig } from '../types';
+import { VehicleType, Make, Model, ADPMaster, ADPMapping, User, ADPMakeMapping, ADPTypeMapping, ADPHistoryEntry, AppConfig } from '../types';
 import { INITIAL_TYPES, INITIAL_MAKES, INITIAL_MODELS, INITIAL_ADP_MASTER, INITIAL_USERS } from '../constants';
 
 // Keys
@@ -8,6 +8,7 @@ const K_MODELS = 'slashdata_models';
 const K_ADP_MASTER = 'slashdata_adp_master';
 const K_ADP_MAPPING = 'slashdata_adp_mapping';
 const K_ADP_MAKE_MAPPING = 'slashdata_adp_make_mapping';
+const K_ADP_TYPE_MAPPING = 'slashdata_adp_type_mapping';
 const K_USERS = 'slashdata_users';
 const K_CONFIG = 'slashdata_config';
 
@@ -61,6 +62,9 @@ export const DataService = {
 
   getADPMakeMappings: (): ADPMakeMapping[] => load(K_ADP_MAKE_MAPPING, [] as ADPMakeMapping[]),
   saveADPMakeMappings: (data: ADPMakeMapping[]) => save(K_ADP_MAKE_MAPPING, data),
+
+  getADPTypeMappings: (): ADPTypeMapping[] => load(K_ADP_TYPE_MAPPING, [] as ADPTypeMapping[]),
+  saveADPTypeMappings: (data: ADPTypeMapping[]) => save(K_ADP_TYPE_MAPPING, data),
 
   getUsers: (): User[] => load(K_USERS, INITIAL_USERS as User[]),
   saveUsers: (data: User[]) => save(K_USERS, data),
