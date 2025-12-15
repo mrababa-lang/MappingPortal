@@ -99,7 +99,8 @@ export const useBulkImportADPMaster = () => {
          const sheetName = workbook.SheetNames[0];
          const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-         await api.post('/adp/master/upload', jsonData);
+         const response = await api.post('/adp/master/upload', jsonData);
+         return response.data;
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adpMaster'] }),
     });

@@ -69,7 +69,8 @@ export const useBulkImportMakes = () => {
        const sheetName = workbook.SheetNames[0];
        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
        
-       await api.post('/makes/bulk', jsonData);
+       const response = await api.post('/makes/bulk', jsonData);
+       return response.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['makes'] }),
   });
@@ -129,7 +130,8 @@ export const useBulkImportModels = () => {
          const sheetName = workbook.SheetNames[0];
          const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-         await api.post('/models/bulk', jsonData);
+         const response = await api.post('/models/bulk', jsonData);
+         return response.data;
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models'] }),
     });
@@ -189,7 +191,8 @@ export const useBulkImportTypes = () => {
          const sheetName = workbook.SheetNames[0];
          const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-         await api.post('/types/bulk', jsonData);
+         const response = await api.post('/types/bulk', jsonData);
+         return response.data;
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),
     });
