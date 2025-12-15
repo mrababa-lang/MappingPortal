@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Info } from 'lucide-react';
 
 // --- Card ---
@@ -144,6 +145,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
   
   const selectedOption = options.find(opt => opt.value === value);
@@ -158,6 +160,29 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [wrapperRef]);
+
+  // Close on scroll to prevent detached popup
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isOpen) setIsOpen(false);
+    };
+    if (isOpen) {
+      window.addEventListener('scroll', handleScroll, true);
+    }
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [isOpen]);
+
+  // Calculate coordinates for Portal
+  useEffect(() => {
+    if (isOpen && wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  }, [isOpen]);
 
   // Sync search term with value when closed, but clear when opened to search
   useEffect(() => {
@@ -200,9 +225,17 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           </div>
         </div>
 
-        {/* Dropdown */}
-        {isOpen && !disabled && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+        {/* Dropdown Portal */}
+        {isOpen && !disabled && createPortal(
+          <div 
+            className="fixed z-[9999] bg-white border border-slate-200 rounded-lg shadow-xl overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
+            style={{
+              top: coords.top,
+              left: coords.left,
+              width: coords.width,
+              maxHeight: '240px'
+            }}
+          >
             {filteredOptions.length > 0 ? (
               <ul className="py-1">
                 {filteredOptions.map((opt) => (
@@ -225,7 +258,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 No matching results
               </div>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
@@ -255,7 +289,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto max-h-[75vh]">
+        <div className="p-6 overflow-y-auto max-h-[85vh]">
           {children}
         </div>
         {footer && (
