@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ADPMaster, ADPMapping } from '../types';
+import * as XLSX from 'xlsx';
 
 export interface ADPQueryParams {
   q?: string;
@@ -93,10 +94,12 @@ export const useBulkImportADPMaster = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (file: File) => {
-         const content = await file.text();
-         await api.post('/adp/master/upload', content, {
-             headers: { 'Content-Type': 'application/json' }
-         });
+         const buffer = await file.arrayBuffer();
+         const workbook = XLSX.read(buffer);
+         const sheetName = workbook.SheetNames[0];
+         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+         await api.post('/adp/master/upload', jsonData);
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adpMaster'] }),
     });

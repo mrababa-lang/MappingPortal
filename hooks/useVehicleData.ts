@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { Make, Model, VehicleType } from '../types';
+import * as XLSX from 'xlsx';
 
 // Helper to normalize array responses to handle { data: [...] } or direct [...]
 const normalizeArray = (data: any): any[] => {
@@ -63,10 +64,12 @@ export const useBulkImportMakes = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (file: File) => {
-       const content = await file.text();
-       await api.post('/makes/bulk', content, {
-          headers: { 'Content-Type': 'application/json' }
-       });
+       const buffer = await file.arrayBuffer();
+       const workbook = XLSX.read(buffer);
+       const sheetName = workbook.SheetNames[0];
+       const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+       
+       await api.post('/makes/bulk', jsonData);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['makes'] }),
   });
@@ -121,10 +124,12 @@ export const useBulkImportModels = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (file: File) => {
-         const content = await file.text();
-         await api.post('/models/bulk', content, {
-            headers: { 'Content-Type': 'application/json' }
-         });
+         const buffer = await file.arrayBuffer();
+         const workbook = XLSX.read(buffer);
+         const sheetName = workbook.SheetNames[0];
+         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+         await api.post('/models/bulk', jsonData);
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models'] }),
     });
@@ -179,10 +184,12 @@ export const useBulkImportTypes = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (file: File) => {
-         const content = await file.text();
-         await api.post('/types/bulk', content, {
-             headers: { 'Content-Type': 'application/json' }
-         });
+         const buffer = await file.arrayBuffer();
+         const workbook = XLSX.read(buffer);
+         const sheetName = workbook.SheetNames[0];
+         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+         await api.post('/types/bulk', jsonData);
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),
     });
