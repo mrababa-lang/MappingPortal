@@ -4,7 +4,7 @@ import { useADPMappings, useUpsertMapping } from '../hooks/useADPData';
 import { useMakes, useModels } from '../hooks/useVehicleData';
 import { useAppConfig } from '../hooks/useAdminData';
 import { ADPMapping, ADPMaster } from '../types';
-import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, SearchableSelect } from '../components/UI';
+import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, SearchableSelect, Pagination } from '../components/UI';
 import { Edit2, Filter, Download, CheckCircle2, AlertTriangle, HelpCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { suggestMapping } from '../services/geminiService';
@@ -138,9 +138,10 @@ export const ADPMappingView: React.FC = () => {
          </div>
       </div>
 
-      <Card>
-         {isLoading ? <Loader2 className="animate-spin m-auto" /> : (
+      <Card className="overflow-hidden">
+         {isLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin" /></div> : (
          <>
+             <div className="overflow-x-auto">
              <table className="w-full">
                 <TableHeader>
                     <TableHead>ADP Vehicle</TableHead>
@@ -152,8 +153,8 @@ export const ADPMappingView: React.FC = () => {
                     {(data?.content || []).map((row: any) => (
                         <TableRow key={row.adpId || row.id} onClick={() => handleOpenModal(row)}>
                             <TableCell>
-                                <div>{row.makeEnDesc} {row.modelEnDesc}</div>
-                                <div className="text-xs text-slate-500">{row.adpMakeId} / {row.adpModelId}</div>
+                                <div className="font-medium text-slate-900">{row.makeEnDesc} {row.modelEnDesc}</div>
+                                <span className="font-mono text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{row.adpMakeId} / {row.adpModelId}</span>
                             </TableCell>
                             <TableCell>
                                 {row.sdMakeName ? `${row.sdMakeName} ${row.sdModelName || ''}` : '-'}
@@ -164,11 +165,13 @@ export const ADPMappingView: React.FC = () => {
                     ))}
                 </tbody>
              </table>
-             <div className="p-4 flex justify-between">
-                 <Button variant="secondary" disabled={page===1} onClick={()=>setPage(p=>p-1)}>Prev</Button>
-                 <span>Page {page}</span>
-                 <Button variant="secondary" onClick={()=>setPage(p=>p+1)}>Next</Button>
              </div>
+             <Pagination 
+                currentPage={page} 
+                totalPages={data?.totalPages || 1} 
+                onPageChange={setPage} 
+                totalItems={data?.totalElements || 0} 
+             />
          </>
          )}
       </Card>

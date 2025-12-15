@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useADPMaster, useBulkImportADPMaster } from '../hooks/useADPData';
 import { ADPMaster } from '../types';
-import { Card, Button, Input, Modal, InfoTooltip } from '../components/UI';
+import { Card, Button, Input, Modal, InfoTooltip, TableHeader, TableHead, TableRow, TableCell, Pagination } from '../components/UI';
 import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -60,8 +60,9 @@ export const ADPMasterView: React.FC = () => {
         <Button variant="secondary" onClick={() => setIsBulkOpen(true)}><Upload size={18} /> Bulk Upload</Button>
       </div>
 
-      <div className="max-w-sm">
-        <Input label="" placeholder="Search..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+      <div className="max-w-sm relative">
+        <Search className="absolute top-3 left-3 text-slate-400" size={18} />
+        <Input label="" placeholder="Search..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-10"/>
       </div>
 
       <Card className="overflow-hidden">
@@ -69,39 +70,37 @@ export const ADPMasterView: React.FC = () => {
         <>
             <div className="overflow-x-auto">
             <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase">
-                    <tr>
-                        <th className="px-6 py-3 text-left">Make</th>
-                        <th className="px-6 py-3 text-left">Model</th>
-                        <th className="px-6 py-3 text-left">Type</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+                <TableHeader>
+                    <TableHead>Make</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Type</TableHead>
+                </TableHeader>
+                <tbody>
                     {(data?.content || []).map((item: ADPMaster) => (
-                        <tr key={item.id}>
-                            <td className="px-6 py-3">
-                                <div className="text-sm font-medium">{item.makeEnDesc}</div>
-                                <div className="text-xs text-slate-500">{item.adpMakeId}</div>
-                            </td>
-                            <td className="px-6 py-3">
-                                <div className="text-sm font-medium">{item.modelEnDesc}</div>
-                                <div className="text-xs text-slate-500">{item.adpModelId}</div>
-                            </td>
-                            <td className="px-6 py-3">
-                                <div className="text-sm font-medium">{item.typeEnDesc}</div>
-                                <div className="text-xs text-slate-500">{item.adpTypeId}</div>
-                            </td>
-                        </tr>
+                        <TableRow key={item.id}>
+                            <TableCell>
+                                <div className="font-medium text-slate-900">{item.makeEnDesc}</div>
+                                <span className="font-mono text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{item.adpMakeId}</span>
+                            </TableCell>
+                            <TableCell>
+                                <div className="font-medium text-slate-900">{item.modelEnDesc}</div>
+                                <span className="font-mono text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{item.adpModelId}</span>
+                            </TableCell>
+                            <TableCell>
+                                <div className="font-medium text-slate-900">{item.typeEnDesc}</div>
+                                <span className="font-mono text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{item.adpTypeId}</span>
+                            </TableCell>
+                        </TableRow>
                     ))}
                 </tbody>
             </table>
             </div>
-            {/* Simple Pagination Controls */}
-            <div className="p-4 border-t flex justify-between items-center">
-                <Button variant="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
-                <span className="text-sm text-slate-500">Page {page} of {data?.totalPages}</span>
-                <Button variant="secondary" disabled={page >= (data?.totalPages || 1)} onClick={() => setPage(p => p + 1)}>Next</Button>
-            </div>
+            <Pagination 
+                currentPage={page} 
+                totalPages={data?.totalPages || 1} 
+                onPageChange={setPage} 
+                totalItems={data?.totalElements || 0} 
+            />
         </>
         )}
       </Card>

@@ -160,7 +160,11 @@ export const MakesView: React.FC = () => {
             <tbody>
               {paginatedMakes.map(make => (
                 <TableRow key={make.id} onClick={() => handleOpenModal(make)}>
-                  <TableCell><span className="font-mono text-xs text-slate-400">{make.id}</span></TableCell>
+                  <TableCell>
+                    <span className="font-mono text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                       {make.id}
+                    </span>
+                  </TableCell>
                   <TableCell><div className="font-medium text-slate-900">{make.name}</div></TableCell>
                   <TableCell>{make.nameAr || '-'}</TableCell>
                   <TableCell>
