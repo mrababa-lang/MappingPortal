@@ -44,6 +44,7 @@ export const ModelsView: React.FC = () => {
     const typeId = model ? getSafeId(model, 'typeId', 'type') : '';
     
     reset({
+        id: model?.id || '',
         name: model?.name || '', 
         nameAr: model?.nameAr || '', 
         makeId: makeId, 
@@ -92,8 +93,8 @@ export const ModelsView: React.FC = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = "make,type,name,nameAr";
-    const sample = "Toyota,SUV,Land Cruiser,لاند كروزر";
+    const headers = "id,make,type,name,nameAr";
+    const sample = "LC200,Toyota,SUV,Land Cruiser,لاند كروزر";
     const csvContent = "\uFEFF" + headers + "\n" + sample;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -166,6 +167,7 @@ export const ModelsView: React.FC = () => {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit' : 'Add'} footer={<Button onClick={handleSubmit(onSubmit)}>Save</Button>}>
           <div className="space-y-4">
+              <Input label="Model ID" {...register('id')} disabled={!!editingId} placeholder="e.g. LC200" />
               <Select label="Make" {...register('makeId')} options={makes.map(m => ({ value: m.id, label: m.name }))} />
               <Select label="Type" {...register('typeId')} options={types.map(t => ({ value: t.id, label: t.name }))} />
               <Input label="Name (En)" {...register('name')} />

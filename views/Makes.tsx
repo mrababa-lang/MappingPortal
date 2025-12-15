@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 
 const makeSchema = z.object({
+  id: z.string().min(1, "ID is required."),
   name: z.string().min(1, "Make name is required."),
   nameAr: z.string().optional(),
 });
@@ -38,23 +39,23 @@ export const MakesView: React.FC = () => {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MakeFormData>({
     resolver: zodResolver(makeSchema),
-    defaultValues: { name: '', nameAr: '' }
+    defaultValues: { id: '', name: '', nameAr: '' }
   });
 
   const handleOpenModal = (make?: Make) => {
     if (make) {
       setEditingId(make.id);
-      reset({ name: make.name, nameAr: make.nameAr || '' });
+      reset({ id: make.id, name: make.name, nameAr: make.nameAr || '' });
     } else {
       setEditingId(null);
-      reset({ name: '', nameAr: '' });
+      reset({ id: '', name: '', nameAr: '' });
     }
     setIsModalOpen(true);
   };
 
   const onSubmit = (data: MakeFormData) => {
     if (editingId) {
-      updateMake.mutate({ id: editingId, ...data } as Make, {
+      updateMake.mutate({ ...data, id: editingId } as Make, {
         onSuccess: () => {
           setIsModalOpen(false);
           toast.success("Make updated");
@@ -107,8 +108,8 @@ export const MakesView: React.FC = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = "name,nameAr";
-    const sample = "Toyota,تويوتا";
+    const headers = "id,name,nameAr";
+    const sample = "TOY,Toyota,تويوتا";
     const csvContent = "\uFEFF" + headers + "\n" + sample;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -188,6 +189,8 @@ export const MakesView: React.FC = () => {
         </>
       }>
         <div className="space-y-4">
+            <Input label="Make ID" {...register('id')} disabled={!!editingId} placeholder="e.g. TOY" />
+            {errors.id && <span className="text-red-500 text-xs">{errors.id.message}</span>}
             <Input label="Name (En)" {...register('name')} />
             {errors.name && <span className="text-red-500 text-xs">{errors.name.message}</span>}
             <Input label="Name (Ar)" {...register('nameAr')} dir="rtl" />

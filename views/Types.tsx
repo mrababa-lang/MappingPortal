@@ -25,7 +25,7 @@ export const TypesView: React.FC = () => {
 
   const handleOpenModal = (type?: VehicleType) => {
     setEditingId(type?.id || null);
-    reset(type || { name: '', description: '' });
+    reset(type || { id: '', name: '', description: '' });
     setIsModalOpen(true);
   };
 
@@ -87,7 +87,8 @@ export const TypesView: React.FC = () => {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit' : 'Add'} footer={<Button onClick={handleSubmit(onSubmit)}>Save</Button>}>
           <div className="space-y-4">
-              <Input label="Name" {...register('name')} placeholder="e.g. SUV, Sedan" />
+              <Input label="Type ID" {...register('id')} disabled={!!editingId} placeholder="e.g. SUV" />
+              <Input label="Name" {...register('name')} placeholder="e.g. Sport Utility Vehicle" />
               <div className="relative">
                  <TextArea label="Description" {...register('description')} rows={4} />
                  {config?.enableAI && (

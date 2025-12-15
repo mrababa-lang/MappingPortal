@@ -27,9 +27,8 @@ export const useCreateMake = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (make: Partial<Make>) => {
-      // Ensure ID is not sent for creation
-      const { id, ...payload } = make;
-      const { data } = await api.post<Make>('/makes', payload);
+      // Send ID for creation (Manual ID Entry)
+      const { data } = await api.post<Make>('/makes', make);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['makes'] }),
@@ -91,9 +90,8 @@ export const useCreateModel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (model: Partial<Model>) => {
-      // Ensure ID is not sent for creation; Backend generates it.
-      const { id, ...payload } = model;
-      const { data } = await api.post<Model>('/models', payload);
+      // Send ID for creation (Manual ID Entry)
+      const { data } = await api.post<Model>('/models', model);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['models'] }),
@@ -152,9 +150,8 @@ export const useCreateType = () => {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: async (type: Partial<VehicleType>) => {
-        // Ensure ID is not sent for creation; Backend generates it.
-        const { id, ...payload } = type;
-        const { data } = await api.post<VehicleType>('/types', payload);
+        // Send ID for creation (Manual ID Entry)
+        const { data } = await api.post<VehicleType>('/types', type);
         return data;
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),
