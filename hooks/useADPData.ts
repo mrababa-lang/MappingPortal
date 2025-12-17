@@ -213,26 +213,19 @@ export const useBulkMappingAction = () => {
 
 // --- MAPPED VEHICLES REPORT ---
 
-export const useADPMappedVehicles = (params: { page: number, size: number, q?: string, dateFrom?: string, dateTo?: string }) => {
+export const useADPMappedVehicles = (params: { page: number, size: number, q?: string, dateFrom?: string, dateTo?: string, status?: string }) => {
   return useQuery({
     queryKey: ['adpMappedVehicles', params],
     queryFn: async () => {
-      // Backend expects an endpoint that filters only mapped items. 
-      // If endpoint doesn't exist yet, we can reuse /adp/mappings with status filters.
-      // However, per spec, we should target: /api/adp/mapped-vehicles
-      
       const backendParams: any = {
         page: (params.page || 1) - 1,
         size: params.size || 20,
         q: params.q,
         dateFrom: params.dateFrom,
-        dateTo: params.dateTo
+        dateTo: params.dateTo,
+        status: params.status // Added status param support
       };
 
-      // Try dedicated endpoint, if fails fall back to mappings with filters? 
-      // For now assuming the backend implemented the spec provided in the text file.
-      // If not, we fall back to /adp/mappings?status=MAPPED,MISSING_MODEL
-      
       try {
         const { data } = await api.get('/adp/mapped-vehicles', { params: backendParams });
         const content = normalizeArray(data);
@@ -247,7 +240,7 @@ export const useADPMappedVehicles = (params: { page: number, size: number, q?: s
       } catch (e) {
          // Fallback logic for mock/dev if dedicated endpoint missing
          console.warn("Dedicated endpoint /adp/mapped-vehicles failed, using generic mappings endpoint.");
-         backendParams.status = 'MAPPED'; // Simple fallback
+         backendParams.status = params.status || 'MAPPED'; 
          const { data } = await api.get('/adp/mappings', { params: backendParams });
          const content = normalizeArray(data);
          return {
@@ -260,10 +253,10 @@ export const useADPMappedVehicles = (params: { page: number, size: number, q?: s
   });
 };
 
-export const downloadMappedVehiclesReport = async (dateFrom?: string, dateTo?: string) => {
+export const downloadMappedVehiclesReport = async (dateFrom?: string, dateTo?: string, status?: string) => {
     try {
         const response = await api.get('/adp/mapped-vehicles/export', {
-            params: { dateFrom, dateTo, format: 'csv' },
+            params: { dateFrom, dateTo, status, format: 'csv' },
             responseType: 'blob'
         });
         

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useADPMappedVehicles, downloadMappedVehiclesReport } from '../hooks/useADPData';
 import { Card, Button, Input, Pagination, TableHeader, TableHead, TableRow, TableCell } from '../components/UI';
-import { Download, Loader2, Search, CheckCircle2, AlertTriangle, Calendar } from 'lucide-react';
+import { Download, Loader2, Search, CheckCircle2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const ADPMappedVehiclesView: React.FC = () => {
@@ -16,27 +16,20 @@ export const ADPMappedVehiclesView: React.FC = () => {
       size: 20, 
       q: searchQuery, 
       dateFrom, 
-      dateTo 
+      dateTo,
+      status: 'MAPPED' // Enforce only MAPPED status
   });
 
   const handleExport = async () => {
       setIsExporting(true);
       try {
-          await downloadMappedVehiclesReport(dateFrom, dateTo);
+          await downloadMappedVehiclesReport(dateFrom, dateTo, 'MAPPED');
           toast.success("Report downloaded successfully");
       } catch (e) {
           toast.error("Failed to download report");
       } finally {
           setIsExporting(false);
       }
-  };
-
-  const renderStatus = (status: string) => {
-    switch(status) {
-        case 'MAPPED': return <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 size={14}/> Mapped</span>;
-        case 'MISSING_MODEL': return <span className="text-amber-600 flex items-center gap-1"><AlertTriangle size={14}/> Missing Model</span>;
-        default: return <span className="text-slate-400">{status}</span>;
-    }
   };
 
   return (
@@ -116,7 +109,7 @@ export const ADPMappedVehiclesView: React.FC = () => {
                                 <div className="text-sm text-slate-600">{row.sdModelName || '-'}</div>
                             </TableCell>
                             <TableCell>
-                                {renderStatus(row.status)}
+                                <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 size={14}/> Mapped</span>
                             </TableCell>
                             <TableCell>
                                 <span className="text-sm text-slate-600">

@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { useADPMappings, useApproveMapping, useRejectMapping, useBulkMappingAction } from '../hooks/useADPData';
 import { Card, Button, TableHeader, TableHead, TableRow, TableCell, Select, Input, Pagination, Modal } from '../components/UI';
-import { CheckCircle2, Clock, ArrowRight, AlertTriangle, HelpCircle, Filter, X, Ban, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, ArrowRight, Filter, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const MappingReviewView: React.FC = () => {
-  // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('pending');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'MAPPED' | 'MISSING_MAKE' | 'MISSING_MODEL'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
 
+  // Hardcode mappingType to MAPPED as per requirement
   const { data, isLoading, refetch } = useADPMappings({
       page,
       size: 20,
       reviewStatus: statusFilter,
-      mappingType: typeFilter,
+      mappingType: 'MAPPED',
       dateFrom,
       dateTo
   });
@@ -37,10 +36,10 @@ export const MappingReviewView: React.FC = () => {
   };
 
   const handleReject = (id: string) => {
-      if(window.confirm("Are you sure you want to reject this mapping? It will be reset to Unmapped.")) {
+      if(window.confirm("Are you sure you want to reject this mapping? It will be removed.")) {
           rejectMutation.mutate(id, {
             onSuccess: () => {
-                toast.success("Mapping rejected/reset");
+                toast.success("Mapping rejected/removed");
                 refetch();
             }
           });
@@ -49,7 +48,6 @@ export const MappingReviewView: React.FC = () => {
 
   const handleBulkApprove = () => {
      if (!data?.content || data.content.length === 0) return;
-     // Filter only pending items for bulk approval
      const pendingIds = data.content.filter((i: any) => !i.reviewedAt).map((i: any) => i.adpId);
      if (pendingIds.length === 0) {
          toast.info("No pending items to approve on this page.");
@@ -74,21 +72,12 @@ export const MappingReviewView: React.FC = () => {
       });
   };
 
-  const renderStatus = (status: string) => {
-      switch(status) {
-          case 'MAPPED': return <span className="text-emerald-600 flex items-center gap-1 font-medium"><CheckCircle2 size={14}/> Mapped</span>;
-          case 'MISSING_MAKE': return <span className="text-red-600 flex items-center gap-1 font-medium"><AlertTriangle size={14}/> Missing Make</span>;
-          case 'MISSING_MODEL': return <span className="text-amber-600 flex items-center gap-1 font-medium"><HelpCircle size={14}/> Missing Model</span>;
-          default: return <span className="text-slate-400 flex items-center gap-1"><Ban size={14}/> Unmapped</span>;
-      }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
          <div>
             <h1 className="text-2xl font-bold text-slate-900">Review Queue</h1>
-            <p className="text-slate-500">Validate and approve mapping links created by users.</p>
+            <p className="text-slate-500">Validate and approve fully mapped vehicles.</p>
          </div>
          <div className="flex gap-2">
             {statusFilter === 'pending' && (
@@ -113,14 +102,6 @@ export const MappingReviewView: React.FC = () => {
                     options={[{value: 'pending', label: 'Pending Review'}, {value: 'reviewed', label: 'Already Reviewed'}, {value: 'all', label: 'All Records'}]}
                 />
             </div>
-            <div className="w-full md:w-48">
-                <Select 
-                    label="Mapping Type" 
-                    value={typeFilter} 
-                    onChange={v => setTypeFilter(v as any)} 
-                    options={[{value: 'all', label: 'All Types'}, {value: 'MAPPED', label: 'Mapped'}, {value: 'MISSING_MODEL', label: 'Missing Model'}, {value: 'MISSING_MAKE', label: 'Missing Make'}]}
-                />
-            </div>
             <div className="w-full md:w-40">
                  <Input type="date" label="From" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             </div>
@@ -138,13 +119,12 @@ export const MappingReviewView: React.FC = () => {
                 <TableHeader>
                     <TableHead>ADP Source</TableHead>
                     <TableHead>Mapping Proposal</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Updated By</TableHead>
                     <TableHead>Actions</TableHead>
                 </TableHeader>
                 <tbody>
                     {(data?.content || []).length === 0 ? (
-                        <tr><td colSpan={5} className="text-center py-8 text-slate-500">No records found.</td></tr>
+                        <tr><td colSpan={4} className="text-center py-8 text-slate-500">No records found.</td></tr>
                     ) : (data?.content || []).map((row: any) => (
                         <TableRow key={row.adpId}>
                             <TableCell>
@@ -154,15 +134,8 @@ export const MappingReviewView: React.FC = () => {
                             <TableCell>
                                 <div className="flex items-center gap-2">
                                     <ArrowRight size={14} className="text-slate-300" />
-                                    {row.status === 'MAPPED' ? (
-                                        <div className="font-medium text-indigo-700">{row.sdMakeName} {row.sdModelName}</div>
-                                    ) : (
-                                        <div className="text-slate-500 italic">Partial / No Mapping</div>
-                                    )}
+                                    <div className="font-medium text-indigo-700">{row.sdMakeName} {row.sdModelName}</div>
                                 </div>
-                            </TableCell>
-                            <TableCell>
-                                {renderStatus(row.status)}
                             </TableCell>
                             <TableCell>
                                 <div className="flex flex-col">
