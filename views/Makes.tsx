@@ -190,9 +190,9 @@ export const MakesView: React.FC = () => {
       }>
         <div className="space-y-4">
             <Input label="Make ID" {...register('id')} disabled={!!editingId} placeholder="e.g. TOY" />
-            {errors.id && <span className="text-red-500 text-xs">{errors.id.message}</span>}
+            {errors.id?.message && <span className="text-red-500 text-xs">{String(errors.id.message)}</span>}
             <Input label="Name (En)" {...register('name')} />
-            {errors.name && <span className="text-red-500 text-xs">{errors.name.message}</span>}
+            {errors.name?.message && <span className="text-red-500 text-xs">{String(errors.name.message)}</span>}
             <Input label="Name (Ar)" {...register('nameAr')} dir="rtl" />
         </div>
       </Modal>

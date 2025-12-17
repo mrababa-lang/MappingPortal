@@ -1,31 +1,29 @@
+
 # Backend Specification: Manual ID Entry for Vehicles
 # Context: Makes, Models, Types tables and endpoints
 
 ================================================================================
 1. OVERVIEW
 ================================================================================
-The client requires that IDs for Vehicle Makes, Models, and Types be manually entered by the user (e.g., "TOY" for Toyota, "SUV" for SUV) instead of being auto-incremented integers.
-
-This ensures the IDs are semantic and match legacy or external system codes.
+The client requires that IDs for Vehicle Makes, Models, and Types be manually entered by the user.
+- **Makes**: Alphanumeric codes (VARCHAR). E.g., "TOY", "BMW".
+- **Models**: Numeric IDs (INTEGER). E.g., 200, 101.
+- **Types**: Numeric IDs (INTEGER). E.g., 1, 2.
 
 ================================================================================
 2. DATABASE SCHEMA CHANGES
 ================================================================================
 
 ### A. Tables
-The `AUTO_INCREMENT` property must be removed from the primary keys. The ID column type should ideally be `VARCHAR` (e.g., VARCHAR(50)) to support alphanumeric codes, or remain `BIGINT` if the user is forced to enter numbers (but VARCHAR is recommended for flexibility like 'TOY-01').
-
-**Changes:**
-1. **Makes Table**:
-   - `id`: Remove AUTO_INCREMENT. Change to VARCHAR(50) if not already.
-2. **VehicleTypes Table**:
-   - `id`: Remove AUTO_INCREMENT. Change to VARCHAR(50).
-3. **Models Table**:
-   - `id`: Remove AUTO_INCREMENT. Change to VARCHAR(50).
+- **Makes Table**: `id` is `VARCHAR(50) PRIMARY KEY`.
+- **Models Table**: `id` is `INT UNSIGNED PRIMARY KEY`. (No Auto Increment)
+- **VehicleTypes Table**: `id` is `INT UNSIGNED PRIMARY KEY`. (No Auto Increment)
 
 ### B. Validation
 - **Uniqueness**: The database must enforce `UNIQUE PRIMARY KEY` constraints.
-- **Foreign Keys**: Ensure FKs in `ADPMappings`, `Models` (make_id, type_id) match the new type (VARCHAR).
+- **Foreign Keys**: 
+  - `Models.make_id` must match `Makes.id` (VARCHAR).
+  - `Models.type_id` must match `VehicleTypes.id` (INT).
 
 ================================================================================
 3. API LOGIC CHANGES (Create / POST)
@@ -41,37 +39,28 @@ Request:
   "name": "Toyota",
   "nameAr": "..."
 }
-Logic: 
-1. Check if `id` "TOY" already exists.
-2. If exists -> Throw 409 Conflict ("ID already exists").
-3. If not -> Insert record with ID = "TOY".
 
 **POST /api/models**
 Request:
 {
-  "id": "LC200",
+  "id": 200,  // Integer
   "makeId": "TOY",
+  "typeId": 1,
   ...
 }
 
 **POST /api/types**
 Request:
 {
-  "id": "SUV",
+  "id": 5,    // Integer
   ...
 }
 
 ### B. Bulk Import (CSV Processing)
-The CSV parsers must be updated to expect an `id` column as the first column (or mapped by name).
-- **Validation**:
-  - Check for duplicate IDs within the CSV file.
-  - Check for duplicate IDs against the Database.
-  - Skip or Error on duplicates.
+- CSV files must include the ID column.
+- Validation must ensure ID format matches the type (String for Make, Int for Model/Type).
 
 ================================================================================
 4. API LOGIC CHANGES (Update / PUT)
 ================================================================================
-- The ID in the URL path (`/api/makes/{id}`) is the identifier.
-- The ID in the body is generally ignored or must match the path.
-- **Renaming IDs**: If the business requirement allows changing an ID, this cascades to all child tables. This is complex. Recommendation: **Disallow ID updates**. Users must delete and re-create if the ID is wrong.
-
+- IDs cannot be changed via PUT. To change an ID, delete and recreate.

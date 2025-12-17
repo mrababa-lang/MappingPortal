@@ -87,7 +87,7 @@ export const TypesView: React.FC = () => {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit' : 'Add'} footer={<Button onClick={handleSubmit(onSubmit)}>Save</Button>}>
           <div className="space-y-4">
-              <Input label="Type ID" {...register('id')} disabled={!!editingId} placeholder="e.g. SUV" />
+              <Input label="Type ID" {...register('id')} disabled={!!editingId} placeholder="e.g. 1" />
               <Input label="Name" {...register('name')} placeholder="e.g. Sport Utility Vehicle" />
               <div className="relative">
                  <TextArea label="Description" {...register('description')} rows={4} />
