@@ -16,7 +16,8 @@ import {
   Settings,
   Shapes,
   ChevronRight,
-  Truck
+  Truck,
+  Table
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { NavItem, User } from '../types';
@@ -43,6 +44,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
   {
     title: "Vehicle Master",
     items: [
+      { id: 'slash-master', label: 'Master Data List', icon: Table },
       { id: 'makes', label: 'Makes', icon: Car },
       { id: 'models', label: 'Models', icon: Settings2 },
       { id: 'types', label: 'Types', icon: Tags },
@@ -92,7 +94,7 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
         // Mapping Admin
         if (normalizedRole === 'MAPPING_ADMIN') {
           const allowedIds = [
-            'dashboard', 'makes', 'models', 'types',
+            'dashboard', 'slash-master', 'makes', 'models', 'types',
             'adp-master', 'adp-makes', 'adp-types', 'adp-mapping', 'adp-mapped-vehicles', 'mapping-review'
           ];
           return allowedIds.includes(item.id);
@@ -101,7 +103,7 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
         // Mapping User
         if (normalizedRole === 'MAPPING_USER') {
            const allowedIds = [
-             'dashboard',
+             'dashboard', 'slash-master',
              'adp-master', 'adp-makes', 'adp-types', 'adp-mapping', 'adp-mapped-vehicles'
            ];
            return allowedIds.includes(item.id);

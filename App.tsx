@@ -11,6 +11,7 @@ import { ADPMappingView } from './views/ADPMapping';
 import { ADPMakesView } from './views/ADPMakes';
 import { ADPVehicleTypesView } from './views/ADPVehicleTypes';
 import { ADPMappedVehiclesView } from './views/ADPMappedVehicles';
+import { SlashMasterDataView } from './views/SlashMasterData';
 import { MappingReviewView } from './views/MappingReview';
 import { UsersView } from './views/Users';
 import { TrackingView } from './views/Tracking';
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
     children: [
        { index: true, element: <Navigate to="/dashboard" replace /> },
        { path: "dashboard", element: <Dashboard /> },
+       { path: "slash-master", element: <SlashMasterDataView /> },
        { path: "makes", element: <MakesView /> },
        { path: "models", element: <ModelsView /> },
        { path: "types", element: <TypesView /> },

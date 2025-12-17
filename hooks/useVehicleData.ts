@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { Make, Model, VehicleType } from '../types';
+import { Make, Model, VehicleType, SlashMasterVehicle } from '../types';
 import * as XLSX from 'xlsx';
 
 // Helper to normalize array responses to handle { data: [...] } or direct [...]
@@ -193,4 +193,97 @@ export const useBulkImportTypes = () => {
       },
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ['types'] }),
     });
+};
+
+// --- SLASH MASTER DATA (CONSOLIDATED) ---
+
+export const useSlashMasterData = (params: { page: number, size: number, q?: string }) => {
+  return useQuery({
+    queryKey: ['slashMaster', params],
+    queryFn: async () => {
+      // Fallback: If backend endpoint /api/master/vehicles doesn't exist yet, we can construct it client-side
+      // But adhering to the requirement, we assume the endpoint exists or will exist.
+      // If mock mode, we could manually join useModels with useMakes/useTypes here.
+      
+      try {
+        const { data } = await api.get('/master/vehicles', { params: {
+            page: (params.page || 1) - 1,
+            size: params.size || 20,
+            q: params.q
+        }});
+
+        const content = normalizeArray(data);
+        const totalElements = data.meta?.totalItems ?? data.totalElements ?? (content.length ? content.length : 0);
+        const totalPages = data.meta?.totalPages ?? data.totalPages ?? 1;
+
+        return {
+            content: content,
+            totalElements: totalElements,
+            totalPages: totalPages
+        };
+      } catch (e) {
+        // Fallback for demo if endpoint not ready: Fetch lists separately
+        console.warn("Using fallback client-side join for master data");
+        const [modelsRes, makesRes, typesRes] = await Promise.all([
+             api.get('/models'),
+             api.get('/makes'),
+             api.get('/types')
+        ]);
+        const models = normalizeArray(modelsRes.data);
+        const makes = normalizeArray(makesRes.data);
+        const types = normalizeArray(typesRes.data);
+
+        // Client side join
+        let joined = models.map((m: any) => {
+           const make = makes.find((mk:any) => mk.id == (m.makeId || (m.make && m.make.id)));
+           const type = types.find((t:any) => t.id == (m.typeId || (m.type && m.type.id)));
+           return {
+               modelId: m.id,
+               modelName: m.name,
+               modelNameAr: m.nameAr,
+               makeId: make?.id || '?',
+               makeName: make?.name || '?',
+               makeNameAr: make?.nameAr,
+               typeId: type?.id || '?',
+               typeName: type?.name || '?'
+           };
+        });
+
+        if (params.q) {
+            const q = params.q.toLowerCase();
+            joined = joined.filter((i:any) => i.makeName.toLowerCase().includes(q) || i.modelName.toLowerCase().includes(q));
+        }
+
+        const total = joined.length;
+        const start = ((params.page || 1) - 1) * (params.size || 20);
+        const paged = joined.slice(start, start + (params.size || 20));
+
+        return {
+            content: paged,
+            totalElements: total,
+            totalPages: Math.ceil(total / (params.size || 20))
+        }
+      }
+    }
+  });
+};
+
+export const downloadSlashMasterReport = async () => {
+    try {
+        const response = await api.get('/master/vehicles/export', {
+            params: { format: 'csv' },
+            responseType: 'blob'
+        });
+        
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `slashdata_master_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    } catch (e) {
+        console.error("Export failed, falling back to client generation if possible", e);
+        throw e;
+    }
 };

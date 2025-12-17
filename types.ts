@@ -22,6 +22,17 @@ export interface Model {
   nameAr?: string;
 }
 
+export interface SlashMasterVehicle {
+  modelId: string;
+  modelName: string;
+  modelNameAr?: string;
+  makeId: string;
+  makeName: string;
+  makeNameAr?: string;
+  typeId: string;
+  typeName: string;
+}
+
 export interface ADPMaster {
   id: string;
   // Make
@@ -97,7 +108,7 @@ export interface AppConfig {
   enableAuditLog: boolean;
 }
 
-export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'adp-master' | 'adp-makes' | 'adp-types' | 'adp-mapping' | 'adp-mapped-vehicles' | 'mapping-review' | 'users' | 'tracking' | 'configuration';
+export type ViewState = 'login' | 'dashboard' | 'types' | 'makes' | 'models' | 'slash-master' | 'adp-master' | 'adp-makes' | 'adp-types' | 'adp-mapping' | 'adp-mapped-vehicles' | 'mapping-review' | 'users' | 'tracking' | 'configuration';
 
 export interface NavItem {
   id: ViewState;
