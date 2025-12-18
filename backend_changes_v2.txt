@@ -22,9 +22,10 @@ WHERE
 **Update**: 
 This endpoint is used for the "Pending ADP Mapping" page. 
 The frontend will request `status=MISSING_MODEL` (or `MISSING_MAKE`, `UNMAPPED`).
-Ensure that filtering by these statuses works correctly and efficiently.
 
-**Note**: The frontend will no longer request `status=MAPPED` for this view.
+**CRITICAL - Rejection Visibility**:
+If a mapping is REJECTED (deleted from `ADPMappings`), it must immediately be discoverable under the `status=UNMAPPED` filter. 
+Ensure the `LEFT JOIN` logic handles `map.id IS NULL` as `UNMAPPED`.
 
 ================================================================================
 3. API ENDPOINT: MAPPING REVIEW (GET /api/adp/mappings with reviewStatus)
@@ -45,5 +46,8 @@ WHERE
 4. API ENDPOINT: REJECT MAPPING (DELETE /api/adp/mappings/{id}/reject)
 ================================================================================
 **Validation**:
-Ensure that "Rejecting" a mapping physically deletes the row from `ADPMappings` (or soft-deletes/resets it to NULL), effectively removing the link to SlashData. 
-This aligns with the requirement "Reject will remove the SD mapping".
+Ensure that "Rejecting" a mapping physically deletes the row from `ADPMappings` (or soft-deletes it by nulling out mapping fields and resetting status to `UNMAPPED`).
+
+**Requirement**: 
+"Reject will remove the SD mapping". 
+The backend must ensure the Audit History reflects this rejection before the mapping row is gone.

@@ -3,7 +3,7 @@ import { useTypes, useCreateType, useUpdateType, useDeleteType } from '../hooks/
 import { useAppConfig } from '../hooks/useAdminData';
 import { VehicleType } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, TextArea, EmptyState, Pagination } from '../components/UI';
-import { Plus, Trash2, Loader2, Sparkles, Tags, Search, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, Sparkles, Tags, Search, X, Filter } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { generateDescription } from '../services/geminiService';
@@ -53,7 +53,11 @@ export const TypesView: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-      if(window.confirm("Delete type?")) deleteType.mutate(id);
+      if(window.confirm("Are you sure you want to delete this vehicle type?")) {
+          deleteType.mutate(id, {
+              onSuccess: () => toast.success("Type deleted")
+          });
+      }
   }
 
   const handleAiGenerate = async (e: React.MouseEvent) => {
@@ -68,7 +72,7 @@ export const TypesView: React.FC = () => {
       setIsAiLoading(false);
   };
 
-  // Filtering & Pagination Logic
+  // Proper client-side filtering
   const filteredTypes = types.filter(t => 
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     t.id.toString().includes(searchQuery) ||
@@ -82,48 +86,56 @@ export const TypesView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
          <div>
             <h1 className="text-2xl font-bold text-slate-900">Vehicle Types</h1>
-            <p className="text-slate-500">Manage vehicle classification types.</p>
+            <p className="text-slate-500">Define and manage vehicle body styles and classifications.</p>
          </div>
-         <Button onClick={() => handleOpenModal()}><Plus size={18}/> Add Type</Button>
+         <Button onClick={() => handleOpenModal()} className="shadow-lg shadow-slate-900/10">
+            <Plus size={18}/> Add Type
+         </Button>
       </div>
 
       <Card className="p-4 bg-white border border-slate-200">
-        <div className="relative max-w-md">
-           <Search className="absolute top-3 left-3 text-slate-400" size={18} />
-           <Input 
-             label="" 
-             placeholder="Search types..." 
-             value={searchQuery}
-             onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
-             className="pl-10"
-           />
-           {searchQuery && (
-               <button 
-                 onClick={() => { setSearchQuery(''); setPage(1); }}
-                 className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"
-               >
-                   <X size={16} />
-               </button>
-           )}
+        <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+                <Search className="absolute top-3 left-3 text-slate-400" size={18} />
+                <Input 
+                    label="" 
+                    placeholder="Search by ID or Name..." 
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+                    className="pl-10 h-11"
+                />
+                {searchQuery && (
+                    <button 
+                        onClick={() => { setSearchQuery(''); setPage(1); }}
+                        className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                )}
+            </div>
+            <div className="text-sm text-slate-400 font-medium whitespace-nowrap hidden sm:block">
+                {filteredTypes.length} types total
+            </div>
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border border-slate-200">
          {types.length === 0 ? (
              <EmptyState 
                 icon={Tags}
-                title="No Types Found"
-                description="Define your first vehicle classification type (e.g. SUV, Sedan)."
-                action={<Button onClick={() => handleOpenModal()}><Plus size={16}/> Add Type</Button>}
+                title="No Types Defined"
+                description="Your internal vehicle type list is empty. Body styles like SUV, Sedan, or Hatchback should be defined here."
+                action={<Button onClick={() => handleOpenModal()}><Plus size={16}/> Create First Type</Button>}
              />
          ) : filteredTypes.length === 0 ? (
              <EmptyState 
                 icon={Search}
                 title="No Matches"
-                description={`No types found matching "${searchQuery}".`}
+                description={`No results found matching "${searchQuery}". Try a different term or ID.`}
+                action={<Button variant="ghost" onClick={() => setSearchQuery('')}>Clear Search</Button>}
              />
          ) : (
             <>
@@ -131,42 +143,81 @@ export const TypesView: React.FC = () => {
             <table className="w-full">
                 <TableHeader>
                     <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead>Classification Name</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableHeader>
                 <tbody>
                     {paginatedTypes.map(type => (
                         <TableRow key={type.id} onClick={() => handleOpenModal(type)}>
-                            <TableCell><span className="font-mono text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-1 rounded">{type.id}</span></TableCell>
-                            <TableCell><span className="font-medium text-slate-900">{type.name}</span></TableCell>
-                            <TableCell><span className="text-slate-500 truncate max-w-md block">{type.description || '-'}</span></TableCell>
                             <TableCell>
-                                <Button variant="ghost" onClick={(e) => { e.stopPropagation(); handleDelete(type.id); }}><Trash2 size={16} className="text-red-500"/></Button>
+                                <span className="font-mono text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded border border-slate-200">
+                                    {type.id}
+                                </span>
+                            </TableCell>
+                            <TableCell>
+                                <span className="font-bold text-slate-900">{type.name}</span>
+                            </TableCell>
+                            <TableCell>
+                                <span className="text-slate-500 text-sm line-clamp-1 max-w-xs xl:max-w-md" title={type.description}>
+                                    {type.description || <span className="italic text-slate-300">No description provided</span>}
+                                </span>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleOpenModal(type)}>
+                                        <Plus className="rotate-45 text-slate-400 group-hover:text-indigo-600 transition-transform" size={16}/>
+                                    </Button>
+                                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDelete(type.id)}>
+                                        <Trash2 size={16} className="text-slate-400 hover:text-red-500 transition-colors"/>
+                                    </Button>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}
                 </tbody>
             </table>
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filteredTypes.length} />
+            <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                onPageChange={setPage} 
+                totalItems={filteredTypes.length} 
+            />
             </>
          )}
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit Type' : 'Add Type'} footer={<Button onClick={handleSubmit(onSubmit)}>Save</Button>}>
-          <div className="space-y-4">
-              <Input label="Type ID" {...register('id')} disabled={!!editingId} placeholder="e.g. 1" error={errors.id?.message as string} />
-              <Input label="Name" {...register('name')} placeholder="e.g. Sport Utility Vehicle" error={errors.name?.message as string} />
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit Vehicle Type' : 'Create New Type'} footer={<Button onClick={handleSubmit(onSubmit)} className="px-8">Save Type</Button>}>
+          <div className="space-y-5">
+              <Input 
+                label="Unique Type ID (Manual)" 
+                {...register('id')} 
+                disabled={!!editingId} 
+                placeholder="e.g. 10" 
+                error={errors.id?.message as string} 
+                className="font-mono"
+              />
+              <Input 
+                label="Type Name" 
+                {...register('name')} 
+                placeholder="e.g. Sport Utility Vehicle" 
+                error={errors.name?.message as string} 
+              />
               <div className="relative">
-                 <TextArea label="Description" {...register('description')} rows={4} />
+                 <TextArea 
+                    label="Internal Description" 
+                    {...register('description')} 
+                    rows={4} 
+                    placeholder="Describe how this type differs from others..."
+                 />
                  {config?.enableAI && (
                      <button 
                        onClick={handleAiGenerate}
                        disabled={isAiLoading || !currentName}
-                       className="absolute top-0 right-0 text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded flex items-center gap-1 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                       className="absolute top-0 right-0 text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2 py-1 rounded-bl-lg flex items-center gap-1.5 hover:bg-indigo-100 transition-colors disabled:opacity-50 border-l border-b border-indigo-100 shadow-sm"
                      >
-                         {isAiLoading ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} />}
+                         {isAiLoading ? <Loader2 size={10} className="animate-spin"/> : <Sparkles size={10} />}
                          AI Generate
                      </button>
                  )}

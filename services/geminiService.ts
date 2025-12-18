@@ -1,3 +1,4 @@
+
 import { api } from './api';
 import { toast } from 'sonner';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -6,8 +7,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateDescription = async (itemName: string, context: string): Promise<string> => {
   try {
+    // Fix: Updated model to 'gemini-3-flash-preview' as per latest guidelines for text tasks.
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: `Generate a concise and professional description for a vehicle item named "${itemName}". Context: ${context}.`,
     });
     return response.text || "";
@@ -20,8 +22,9 @@ export const generateDescription = async (itemName: string, context: string): Pr
 
 export const suggestModels = async (makeName: string): Promise<string[]> => {
   try {
+    // Fix: Updated model to 'gemini-3-flash-preview' as per latest guidelines.
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: `List 5 popular car models for the manufacturer "${makeName}".`,
       config: {
         responseMimeType: "application/json",
@@ -49,8 +52,9 @@ export const suggestModels = async (makeName: string): Promise<string[]> => {
 
 export const suggestMapping = async (adpDescription: string): Promise<{ make: string, model: string } | null> => {
   try {
+    // Fix: Updated model to 'gemini-3-flash-preview' as per latest guidelines.
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: `Extract the vehicle Manufacturer (make) and Model from this raw description: "${adpDescription}". If you cannot find them, return empty strings.`,
       config: {
         responseMimeType: "application/json",

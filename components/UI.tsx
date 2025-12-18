@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Info, FileX } from 'lucide-react';
@@ -364,29 +365,30 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 };
 
 // --- Table ---
-export const TableHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <thead className="bg-slate-50 border-b border-slate-200">
+// Fix: Added className prop to TableHeader, TableRow, TableHead, and TableCell to allow external styling and fix TS errors.
+export const TableHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <thead className={`bg-slate-50 border-b border-slate-200 ${className}`}>
     <tr>{children}</tr>
   </thead>
 );
 
-export const TableRow: React.FC<{ children: React.ReactNode; onClick?: () => void }> = ({ children, onClick }) => (
+export const TableRow: React.FC<{ children: React.ReactNode; onClick?: () => void; className?: string }> = ({ children, onClick, className = '' }) => (
   <tr 
     onClick={onClick}
-    className="border-b border-slate-100 hover:bg-slate-50 transition-colors last:border-0 cursor-pointer"
+    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors last:border-0 cursor-pointer ${className}`}
   >
     {children}
   </tr>
 );
 
-export const TableHead: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+export const TableHead: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <th className={`px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${className}`}>
     {children}
   </th>
 );
 
-export const TableCell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+export const TableCell: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <td className={`px-6 py-4 text-sm text-slate-600 whitespace-nowrap ${className}`}>
     {children}
   </td>
 );

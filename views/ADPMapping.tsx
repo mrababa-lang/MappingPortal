@@ -1,10 +1,12 @@
+
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useADPMappings, useUpsertMapping } from '../hooks/useADPData';
 import { useMakes, useModels } from '../hooks/useVehicleData';
 import { useAppConfig } from '../hooks/useAdminData';
 import { Card, Button, Select, Modal, TableHeader, TableHead, TableRow, TableCell, Input, SearchableSelect, Pagination, EmptyState } from '../components/UI';
-import { Edit2, Loader2, Sparkles, Search, Filter, X, Calendar } from 'lucide-react';
+// Fix: Import missing Tag component from lucide-react
+import { Edit2, Loader2, Sparkles, Search, Filter, X, Calendar, Info, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { suggestMapping } from '../services/geminiService';
 
@@ -12,7 +14,7 @@ export const ADPMappingView: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   
-  // Default status filter to MISSING_MODEL, allow changing to UNMAPPED, exclude MAPPED
+  // Default status filter to MISSING_MODEL
   const statusFilter = searchParams.get('statusFilter') || 'MISSING_MODEL';
   const dateFrom = searchParams.get('dateFrom') || '';
   const dateTo = searchParams.get('dateTo') || '';
@@ -37,7 +39,7 @@ export const ADPMappingView: React.FC = () => {
   
   const { data: makes = [] } = useMakes();
   const { data: models = [] } = useModels();
-  const { data: config } = useAppConfig();
+  const { data: config = { enableAI: false } } = useAppConfig();
   
   const upsertMapping = useUpsertMapping();
 
@@ -67,13 +69,13 @@ export const ADPMappingView: React.FC = () => {
       if(targetId) {
           upsertMapping.mutate({
               adpId: targetId,
-              status: 'MAPPED', // Always set to MAPPED
+              status: 'MAPPED', 
               makeId: mappingState.makeId,
               modelId: mappingState.modelId
           }, {
               onSuccess: () => {
                   setIsModalOpen(false);
-                  toast.success("Mapping saved");
+                  toast.success("Mapping saved and moved to Review Queue");
               }
           });
       } else {
@@ -125,105 +127,145 @@ export const ADPMappingView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
          <div>
             <h1 className="text-2xl font-bold text-slate-900">Pending ADP Mapping</h1>
-            <p className="text-slate-500">Review unmapped vehicles and missing models.</p>
+            <p className="text-slate-500">Unmapped records and items with missing models requiring attention.</p>
+         </div>
+         <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-700 text-xs font-medium">
+            <Info size={14} />
+            Rejected items from Review Queue will reappear here.
          </div>
       </div>
 
-      <Card className="p-4 bg-white border border-slate-200">
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-             <div className="w-full md:flex-1 relative">
-                <Search className="absolute top-9 left-3 text-slate-400" size={18} />
-                <Input 
-                  label="Search" 
-                  placeholder="Search ADP Vehicle..." 
-                  value={q}
-                  onChange={e => updateParam('q', e.target.value)}
-                  className="pl-10"
-                />
+      <Card className="p-5 bg-white border border-slate-200">
+        <div className="flex flex-col lg:flex-row gap-5 items-end">
+             {/* Proper Search Filter */}
+             <div className="w-full lg:flex-1 space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Search Source</label>
+                <div className="relative">
+                    <Search className="absolute top-3 left-3 text-slate-400" size={18} />
+                    <Input 
+                        label="" 
+                        placeholder="Search Make, Model or Type description..." 
+                        value={q}
+                        onChange={e => updateParam('q', e.target.value)}
+                        className="pl-10 h-11"
+                    />
+                    {q && (
+                        <button onClick={() => updateParam('q', '')} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
              </div>
-             <div className="w-full md:w-56">
+
+             {/* Proper Status Filter */}
+             <div className="w-full lg:w-56">
                  <Select 
-                    label="Status" 
+                    label="Filter Status" 
                     value={statusFilter} 
                     onChange={e => updateParam('statusFilter', e.target.value)} 
                     options={[
                         {value: 'MISSING_MODEL', label: 'Missing Model'}, 
                         {value: 'MISSING_MAKE', label: 'Missing Make'},
-                        {value: 'UNMAPPED', label: 'Unmapped'}
+                        {value: 'UNMAPPED', label: 'Unmapped / Rejected'}
                     ]} 
+                    className="h-11"
                  />
              </div>
-             <div className="w-full md:w-auto flex items-end gap-2">
+
+             {/* Proper Date Range Filter */}
+             <div className="w-full lg:w-auto flex items-end gap-2">
                  <div className="w-36">
                     <Input 
-                        label="From" 
+                        label="From Date" 
                         type="date" 
                         value={dateFrom} 
                         onChange={e => updateParam('dateFrom', e.target.value)} 
+                        className="h-11"
                     />
                  </div>
                  <div className="w-36">
                     <Input 
-                        label="To" 
+                        label="To Date" 
                         type="date" 
                         value={dateTo} 
                         onChange={e => updateParam('dateTo', e.target.value)} 
+                        className="h-11"
                     />
                  </div>
              </div>
+
+             {/* Clear Action */}
              {hasActiveFilters && (
-                 <Button variant="ghost" onClick={resetFilters} className="text-red-500 h-[42px] mb-0.5">
-                     <X size={16} /> Clear
+                 <Button variant="ghost" onClick={resetFilters} className="text-red-500 h-11 mb-0.5 group">
+                     <X size={16} className="group-hover:rotate-90 transition-transform"/> Clear
                  </Button>
              )}
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
-         {isLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin" /></div> : (
+      <Card className="overflow-hidden border border-slate-200">
+         {isLoading ? (
+             <div className="p-20 flex flex-col items-center justify-center gap-3">
+                 <Loader2 className="animate-spin text-slate-400" size={32} />
+                 <span className="text-sm text-slate-400 font-medium">Fetching pending records...</span>
+             </div>
+         ) : (
          <>
              {(data?.content || []).length === 0 ? (
                 <EmptyState 
-                    title="No Pending Items"
-                    description="Great job! There are no records matching your current filters."
+                    title="Queue Clear"
+                    description={`No items found matching the current filters. ${hasActiveFilters ? 'Try broadening your search or resetting filters.' : ''}`}
                     icon={Search}
+                    action={hasActiveFilters ? <Button variant="secondary" onClick={resetFilters}>Reset All Filters</Button> : null}
                 />
              ) : (
              <div className="overflow-x-auto">
              <table className="w-full">
                 <TableHeader>
-                    <TableHead>ADP Vehicle</TableHead>
-                    <TableHead>SD Mapping</TableHead>
-                    <TableHead>Action</TableHead>
+                    <TableHead>Source Vehicle (ADP)</TableHead>
+                    <TableHead>Current SD Mapping</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                 </TableHeader>
                 <tbody>
                     {(data?.content || []).map((row: any) => (
                         <TableRow key={row.adpId || row.id} onClick={() => handleOpenModal(row)}>
                             <TableCell>
-                                <div className="font-medium text-slate-900">{row.makeEnDesc} {row.modelEnDesc}</div>
-                                <span className="font-mono text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{row.adpMakeId} / {row.adpModelId}</span>
+                                <div className="space-y-1">
+                                    <div className="font-bold text-slate-900 text-sm leading-tight">{row.makeEnDesc} {row.modelEnDesc}</div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-mono text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded leading-none">
+                                            {row.adpMakeId} / {row.adpModelId}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{row.typeEnDesc}</span>
+                                    </div>
+                                </div>
                             </TableCell>
                             <TableCell>
                                 {row.sdMakeName ? (
-                                    <div className="flex items-center gap-1">
-                                        <span className="font-medium text-indigo-700">{row.sdMakeName}</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-bold text-indigo-700">{row.sdMakeName}</span>
+                                        <span className="text-slate-300">/</span>
                                         {row.sdModelName ? (
-                                            <>
-                                              <span className="text-slate-400">/</span>
-                                              <span className="text-slate-700">{row.sdModelName}</span>
-                                            </>
+                                              <span className="text-slate-700 font-medium">{row.sdModelName}</span>
                                         ) : (
-                                            <span className="text-amber-500 text-xs italic ml-1">(Missing Model)</span>
+                                            <span className="text-amber-500 text-xs font-bold italic bg-amber-50 px-2 py-0.5 rounded border border-amber-100">MISSING MODEL</span>
                                         )}
                                     </div>
                                 ) : (
-                                    <span className="text-slate-400 italic">Not Mapped</span>
+                                    <div className="flex items-center gap-2 text-slate-400 italic text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                        Unmapped
+                                    </div>
                                 )}
                             </TableCell>
-                            <TableCell><Button variant="ghost" onClick={() => handleOpenModal(row)}><Edit2 size={16}/></Button></TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" className="h-9 w-9 p-0 hover:bg-indigo-50 group" onClick={() => handleOpenModal(row)}>
+                                    <Edit2 size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors"/>
+                                </Button>
+                            </TableCell>
                         </TableRow>
                     ))}
                 </tbody>
@@ -240,39 +282,51 @@ export const ADPMappingView: React.FC = () => {
          )}
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Map Vehicle" footer={<Button onClick={handleSave}>Save</Button>}>
-         <div className="space-y-4">
-             <div className="flex justify-between items-start p-3 bg-slate-50 rounded">
-                 <div>
-                    <span className="text-xs font-bold text-slate-500 block mb-1">Source Description:</span>
-                    <div className="font-medium">{selectedItem?.makeEnDesc} {selectedItem?.modelEnDesc}</div>
-                    <div className="text-xs text-slate-500 mt-1">Type: {selectedItem?.typeEnDesc}</div>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Map Vehicle to SlashData" footer={<Button onClick={handleSave} className="w-full sm:w-auto px-10">Save Mapping</Button>}>
+         <div className="space-y-5">
+             <div className="flex justify-between items-start p-4 bg-slate-50 border border-slate-200 rounded-xl relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 p-1 bg-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-tighter rounded-bl">ADP SOURCE</div>
+                 <div className="z-10">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Raw Description</span>
+                    <div className="font-bold text-lg text-slate-900 leading-tight">{selectedItem?.makeEnDesc} {selectedItem?.modelEnDesc}</div>
+                    <div className="text-xs font-medium text-slate-500 mt-1.5 flex items-center gap-2">
+                        <Tag size={12} /> {selectedItem?.typeEnDesc}
+                    </div>
                  </div>
                  {config?.enableAI && (
-                     <Button variant="ai" className="px-3 h-8 text-xs" onClick={handleAiSuggest} isLoading={isAiLoading}>
+                     <Button variant="ai" className="px-4 h-9 text-xs shadow-md" onClick={handleAiSuggest} isLoading={isAiLoading}>
                          <Sparkles size={14}/> Auto-Detect
                      </Button>
                  )}
              </div>
 
-             <SearchableSelect 
-                label="Make (Required)" 
-                value={mappingState.makeId} 
-                onChange={v => setMappingState({...mappingState, makeId: v, modelId: ''})} 
-                options={(Array.isArray(makes) ? makes : []).map(m => ({value: m.id, label: m.name}))} 
-             />
+             <div className="grid grid-cols-1 gap-5 pt-2">
+                <SearchableSelect 
+                    label="Target Make (Required)" 
+                    value={mappingState.makeId} 
+                    onChange={v => setMappingState({...mappingState, makeId: v, modelId: ''})} 
+                    options={(Array.isArray(makes) ? makes : []).map(m => ({value: m.id, label: m.name}))} 
+                    placeholder="Search manufacturers..."
+                />
+                
+                <SearchableSelect 
+                    label="Target Model (Required)" 
+                    value={mappingState.modelId} 
+                    onChange={v => setMappingState({...mappingState, modelId: v})} 
+                    disabled={!mappingState.makeId}
+                    options={(Array.isArray(models) ? models : [])
+                        .filter(m => {
+                            const modelMakeId = m.makeId || (m.make && m.make.id);
+                            return modelMakeId == mappingState.makeId;
+                        })
+                        .map(m => ({value: m.id, label: m.name}))} 
+                    placeholder={mappingState.makeId ? "Search models..." : "Select a Make first"}
+                />
+             </div>
              
-             <SearchableSelect 
-                label="Model (Required)" 
-                value={mappingState.modelId} 
-                onChange={v => setMappingState({...mappingState, modelId: v})} 
-                options={(Array.isArray(models) ? models : [])
-                    .filter(m => {
-                        const modelMakeId = m.makeId || (m.make && m.make.id);
-                        return modelMakeId == mappingState.makeId;
-                    })
-                    .map(m => ({value: m.id, label: m.name}))} 
-             />
+             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[11px] text-blue-700 leading-relaxed">
+                <strong>Note:</strong> Saving this mapping will set its status to <strong>MAPPED</strong> and send it to the <strong>Review Queue</strong> for final verification by an administrator.
+             </div>
          </div>
       </Modal>
     </div>
