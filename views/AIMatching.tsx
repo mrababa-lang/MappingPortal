@@ -1,10 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { useADPMappings, useUpsertMapping } from '../hooks/useADPData';
 import { useMakes, useModels } from '../hooks/useVehicleData';
-// Fix: Removed Loader2 from UI components import
 import { Card, Button, TableHeader, TableHead, TableRow, TableCell, EmptyState, Pagination } from '../components/UI';
-// Fix: Added Loader2 to lucide-react import
 import { Sparkles, Check, X, RefreshCw, Search, BrainCircuit, AlertCircle, TrendingUp, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { suggestMapping } from '../services/geminiService';
@@ -22,7 +19,7 @@ export const AIMatchingView: React.FC = () => {
   
   const { data: makes = [] } = useMakes();
   const { data: models = [] } = useModels();
-  upsertMapping = useUpsertMapping();
+  const upsertMapping = useUpsertMapping();
 
   const pendingItems = data?.content || [];
 
