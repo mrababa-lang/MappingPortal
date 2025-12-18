@@ -8,6 +8,7 @@ import { ModelsView } from './views/Models';
 import { TypesView } from './views/Types';
 import { ADPMasterView } from './views/ADPMaster';
 import { ADPMappingView } from './views/ADPMapping';
+import { AIMatchingView } from './views/AIMatching';
 import { ADPMakesView } from './views/ADPMakes';
 import { ADPVehicleTypesView } from './views/ADPVehicleTypes';
 import { ADPMappedVehiclesView } from './views/ADPMappedVehicles';
@@ -66,6 +67,7 @@ const router = createBrowserRouter([
        { path: "adp-master", element: <ADPMasterView /> },
        { path: "adp-makes", element: <ADPMakesView /> },
        { path: "adp-types", element: <ADPVehicleTypesView /> },
+       { path: "adp-matching", element: <AIMatchingView /> },
        { path: "adp-mapping", element: <ADPMappingView /> },
        { path: "adp-mapped-vehicles", element: <ADPMappedVehiclesView /> },
        { path: "mapping-review", element: <MappingReviewView /> },

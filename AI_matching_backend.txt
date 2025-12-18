@@ -1,0 +1,55 @@
+# SlashData Vehicle Portal - AI Matching Backend Specification
+
+## 1. OVERVIEW
+The AI Matching feature automates the detection of vehicle links between raw ADP descriptions and internal SlashData hierarchy. It uses large language models (Gemini) to identify patterns that standard string matching might miss.
+
+## 2. API ENDPOINTS
+
+### 2.1 Get Batch Analysis Data
+- **Endpoint**: `GET /api/adp/mappings` (Reuse existing)
+- **Params**: `status=UNMAPPED`, `page`, `size`
+- **Output**: List of records that need AI attention.
+
+### 2.2 Submit AI Predicted Mapping
+- **Endpoint**: `PUT /api/adp/mappings/{adpId}` (Reuse existing)
+- **Payload**:
+  ```json
+  {
+    "status": "MAPPED",
+    "makeId": "TOY",
+    "modelId": "200",
+    "confidence": 85 // New optional metadata to store AI confidence
+  }
+  ```
+- **Logic**: Upsert to `ADPMappings`. Ensure `reviewed_at` is NULL so it goes to the Review Queue.
+
+### 2.3 Proposed Dedicated Batch AI Endpoint (Highly Recommended)
+To prevent front-end timeouts and handle larger volumes, the backend should implement a dedicated async matching service.
+
+- **Endpoint**: `POST /api/ai/batch-match`
+- **Role**: `MAPPING_ADMIN`, `ADMIN`
+- **Logic**:
+  1. Retrieve all records with `status = 'UNMAPPED'`.
+  2. Send batches of 20 records to Gemini with a system prompt containing the current internal list of `Makes` and `Models`.
+  3. Response must be JSON array: `[{ adpId: "...", makeId: "...", modelId: "...", confidence: 0.XX }]`.
+  4. Backend automatically updates mappings where `confidence > 0.90` and flags others for "Review".
+
+## 3. PROMPT ENGINEERING (Server-Side)
+The backend service should construct the following prompt for Gemini:
+
+"Context: You are a vehicle data expert.
+Internal Makes: [List of IDs:Names]
+Internal Models for selected Makes: [List of IDs:Names]
+Task: Given the raw description 'TOYOTA CAMRY 2023 LE', identify the most likely internal Make ID and Model ID.
+Output Format: JSON only { 'makeId': 'TOY', 'modelId': '200', 'confidence': 0.95 }"
+
+## 4. DATABASE UPDATES
+- **ADPMappings Table**: Add `ai_confidence` (INT UNSIGNED NULL) to store the score for reporting.
+- **ADPMappingHistory**: Ensure the action is logged as `AI_SUGGESTED` vs `MANUAL_UPDATE`.
+
+## 5. FLOW LOGIC
+1. Record exists in `ADPMaster`. No record in `ADPMappings`.
+2. AI Analysis identifies SD Make/Model.
+3. User approves -> `ADPMappings` record created with `status='MAPPED'`.
+4. Result appears in **Review Queue**.
+5. Admin approves -> `reviewed_at` set.
