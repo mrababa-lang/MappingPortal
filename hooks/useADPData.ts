@@ -118,18 +118,45 @@ export const useUpdateADPMaster = () => {
   });
 };
 
-export const useBulkImportADPMaster = () => {
+/**
+ * Enhanced Bulk Import with Sequential Chunking
+ * Handles large files by splitting the data into manageable chunks
+ */
+export const useBulkImportADPMaster = (onProgress?: (progress: number) => void) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (file: File) => {
        const buffer = await file.arrayBuffer();
        const workbook = XLSX.read(buffer);
        const sheetName = workbook.SheetNames[0];
-       const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+       const jsonData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-       // The backend /bulk endpoint handles upsert (update existing, insert new)
-       const response = await api.post('/adp/master/bulk', jsonData);
-       return response.data;
+       const CHUNK_SIZE = 500;
+       const chunks = [];
+       for (let i = 0; i < jsonData.length; i += CHUNK_SIZE) {
+         chunks.push(jsonData.slice(i, i + CHUNK_SIZE));
+       }
+
+       let totalAdded = 0;
+       let totalSkipped = 0;
+
+       for (let i = 0; i < chunks.length; i++) {
+         if (onProgress) {
+           onProgress(Math.round(((i + 1) / chunks.length) * 100));
+         }
+         
+         const response = await api.post('/adp/master/bulk', chunks[i]);
+         const result = response.data?.data || response.data || {};
+         
+         totalAdded += (result.recordsAdded || result.addedCount || 0);
+         totalSkipped += (result.recordsSkipped || result.skippedCount || 0);
+       }
+
+       return {
+         recordsAdded: totalAdded,
+         recordsSkipped: totalSkipped,
+         totalProcessed: jsonData.length
+       };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adpMaster'] });

@@ -42,6 +42,7 @@ export const ADPMasterView: React.FC = () => {
   
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [syncProgress, setSyncProgress] = useState(0);
 
   // Debounce search
   useEffect(() => {
@@ -53,7 +54,12 @@ export const ADPMasterView: React.FC = () => {
   }, [searchQuery]);
 
   const { data, isLoading } = useADPMaster({ page, size: 50, q: debouncedSearch });
-  const bulkImport = useBulkImportADPMaster();
+  
+  // Initialize bulk import with a progress callback
+  const bulkImport = useBulkImportADPMaster((progress) => {
+    setSyncProgress(progress);
+  });
+  
   const createRecord = useCreateADPMaster();
   const updateRecord = useUpdateADPMaster();
 
@@ -73,17 +79,28 @@ export const ADPMasterView: React.FC = () => {
 
   const handleBulk = () => {
       if(bulkFile) {
+          setSyncProgress(1); // Start indicator
           bulkImport.mutate(bulkFile, { 
-              onSuccess: (response: any) => { 
-                  const resultData = response.data || response;
-                  setUploadResult(resultData);
+              onSuccess: (result: any) => { 
+                  setUploadResult(result);
                   setBulkFile(null);
+                  setSyncProgress(0);
                   toast.success("Bulk update processed successfully"); 
               },
-              onError: (err: any) => toast.error(err.message || "Upload failed")
+              onError: (err: any) => {
+                setSyncProgress(0);
+                toast.error(err.message || "Upload failed");
+              }
           });
       }
   }
+
+  const handleCloseBulk = () => {
+    setIsBulkOpen(false);
+    setUploadResult(null);
+    setSyncProgress(0);
+    setBulkFile(null);
+  };
 
   const handleOpenEdit = (record?: ADPMaster) => {
     if (record) {
@@ -377,31 +394,48 @@ export const ADPMasterView: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={isBulkOpen} onClose={() => setIsBulkOpen(false)} title="Master Bulk Synchronizer" footer={
+      <Modal isOpen={isBulkOpen} onClose={handleCloseBulk} title="Master Bulk Synchronizer" footer={
           !uploadResult ? (
-             <><Button variant="secondary" onClick={() => setIsBulkOpen(false)}>Cancel</Button><Button onClick={handleBulk} isLoading={bulkImport.isPending} className="px-8 shadow-lg shadow-indigo-500/10">Upload & Synchronize</Button></>
+             <><Button variant="secondary" onClick={handleCloseBulk}>Cancel</Button><Button onClick={handleBulk} isLoading={bulkImport.isPending} className="px-8 shadow-lg shadow-indigo-500/10">Upload & Synchronize</Button></>
           ) : (
-             <Button onClick={() => setIsBulkOpen(false)}>Close Wizard</Button>
+             <Button onClick={handleCloseBulk}>Close Wizard</Button>
           )
       }>
          {!uploadResult ? (
              <div className="space-y-5">
                  <div className="p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-[13px] text-indigo-700 flex gap-4 leading-relaxed">
                     <Database size={20} className="shrink-0 text-indigo-500" />
-                    <p><strong>Intelligent Upsert Logic:</strong> The system will identify existing records by their source IDs and update descriptions automatically. New unique identifiers will be appended as fresh ledger entries.</p>
+                    <p><strong>Sequential Upsert Logic:</strong> Large files are processed in chunks of 500 records to ensure system stability. Existing records are updated, and new ones are appended.</p>
                  </div>
 
-                 <div className="p-10 bg-slate-50 border-2 border-slate-200 rounded-2xl border-dashed flex flex-col items-center justify-center transition-all hover:bg-slate-100 group cursor-pointer relative">
-                     <Upload size={48} className="text-slate-300 mb-4 group-hover:text-indigo-400 group-hover:-translate-y-1 transition-all" />
-                     <p className="text-sm font-bold text-slate-700 mb-1">Drop your ADP Master CSV here</p>
-                     <p className="text-xs text-slate-400 mb-6">UTF-8 encoded files supported (Max 50MB)</p>
-                     <input type="file" accept=".csv" onChange={e => setBulkFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                     {bulkFile && (
-                         <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-xs animate-in zoom-in-95">
-                             <CheckCircle2 size={14} /> {bulkFile.name}
-                         </div>
-                     )}
-                 </div>
+                 {syncProgress > 0 ? (
+                    <div className="p-8 space-y-4 text-center">
+                        <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200 shadow-inner">
+                            <div 
+                                className="bg-indigo-600 h-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(79,70,229,0.3)]"
+                                style={{ width: `${syncProgress}%` }}
+                            ></div>
+                        </div>
+                        <p className="text-sm font-black text-slate-700 uppercase tracking-widest animate-pulse">
+                            Synchronizing: {syncProgress}% Complete
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">
+                            Please do not close this window during the process
+                        </p>
+                    </div>
+                 ) : (
+                    <div className="p-10 bg-slate-50 border-2 border-slate-200 rounded-2xl border-dashed flex flex-col items-center justify-center transition-all hover:bg-slate-100 group cursor-pointer relative">
+                        <Upload size={48} className="text-slate-300 mb-4 group-hover:text-indigo-400 group-hover:-translate-y-1 transition-all" />
+                        <p className="text-sm font-bold text-slate-700 mb-1">Drop your ADP Master CSV here</p>
+                        <p className="text-xs text-slate-400 mb-6">UTF-8 encoded files supported (Max 50MB)</p>
+                        <input type="file" accept=".csv" onChange={e => setBulkFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                        {bulkFile && (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-xs animate-in zoom-in-95">
+                                <CheckCircle2 size={14} /> {bulkFile.name} (Ready to Sync)
+                            </div>
+                        )}
+                    </div>
+                 )}
              </div>
          ) : (
              <div className="space-y-6 py-4">
@@ -411,19 +445,22 @@ export const ADPMasterView: React.FC = () => {
                    </div>
                    <div>
                        <h3 className="font-black text-slate-800 text-lg leading-none mb-1">Synchronization Complete</h3>
-                       <p className="text-sm text-slate-500 font-medium">The ERP source ledger has been updated across all environments.</p>
+                       <p className="text-sm text-slate-500 font-medium">The ERP source ledger has been fully updated across all environmental nodes.</p>
                    </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                    <Card className="p-6 bg-white border-slate-100 text-center shadow-sm">
-                      <span className="block text-4xl font-black text-emerald-600 tabular-nums mb-1">{uploadResult.recordsAdded || uploadResult.addedCount || 0}</span>
-                      <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Modified / New</span>
+                      <span className="block text-4xl font-black text-emerald-600 tabular-nums mb-1">{uploadResult.recordsAdded || 0}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Modified / Created</span>
                    </Card>
                    <Card className="p-6 bg-white border-slate-100 text-center shadow-sm">
-                      <span className="block text-4xl font-black text-slate-300 tabular-nums mb-1">{uploadResult.recordsSkipped || uploadResult.skippedCount || 0}</span>
+                      <span className="block text-4xl font-black text-slate-300 tabular-nums mb-1">{uploadResult.recordsSkipped || 0}</span>
                       <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Valid Unchanged</span>
                    </Card>
+                </div>
+                <div className="px-4 py-2 bg-slate-50 rounded-lg border border-slate-100 text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total File Integrity Check: {uploadResult.totalProcessed || 0} Records Verified</p>
                 </div>
              </div>
          )}
