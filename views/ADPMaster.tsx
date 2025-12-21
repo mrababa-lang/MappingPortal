@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useADPMaster, useBulkImportADPMaster, useCreateADPMaster, useUpdateADPMaster } from '../hooks/useADPData';
 import { ADPMaster } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, HighlightText, TableSkeleton, EmptyState } from '../components/UI';
-// Added missing icon imports (Car, Settings2, Tags) to resolve errors on lines 341, 349, and 360
 import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock, Layers, Hash, Car, Settings2, Tags } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -68,8 +67,8 @@ export const ADPMasterView: React.FC = () => {
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 82, // Optimized height for stacked bilingual text
-    overscan: 12
+    estimateSize: () => 92, // Slightly taller for bilingual spacing
+    overscan: 10
   });
 
   const handleBulk = () => {
@@ -127,7 +126,7 @@ export const ADPMasterView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 flex flex-col h-full overflow-hidden">
+    <div className="space-y-6 flex flex-col h-full overflow-hidden pb-4">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div className="space-y-1">
            <h1 className="text-3xl font-black text-slate-900 tracking-tight">ADP Master Hub</h1>
@@ -137,7 +136,7 @@ export const ADPMasterView: React.FC = () => {
             <Button variant="secondary" onClick={() => setIsBulkOpen(true)} className="h-11 px-6 bg-white shadow-sm border-slate-200">
               <Upload size={18} className="text-slate-500" /> Bulk Update
             </Button>
-            <Button variant="primary" onClick={() => handleOpenEdit()} className="h-11 px-8 bg-slate-900 shadow-lg shadow-slate-900/10">
+            <Button variant="primary" onClick={() => handleOpenEdit()} className="h-11 px-8 bg-slate-900 shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all">
               <Plus size={18} /> Add Record
             </Button>
         </div>
@@ -160,10 +159,10 @@ export const ADPMasterView: React.FC = () => {
                     </button>
                 )}
             </div>
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-100/50 rounded-lg border border-slate-200/40">
-                <Database size={14} className="text-slate-400" />
+            <div className="hidden sm:flex items-center gap-3 px-5 py-2.5 bg-slate-100/50 rounded-xl border border-slate-200/40">
+                <Database size={14} className="text-indigo-500" />
                 <span className="text-xs font-black text-slate-600 uppercase tracking-tighter">
-                    {data?.totalElements || 0} Synchronized Records
+                    {data?.totalElements || 0} Registered Records
                 </span>
             </div>
         </div>
@@ -180,136 +179,143 @@ export const ADPMasterView: React.FC = () => {
                     action={<Button onClick={() => handleOpenEdit()} variant="primary" className="mt-4">Add Manual Entry</Button>}
                 />
             ) : (
-                <div ref={parentRef} className="flex-1 overflow-auto scroll-smooth">
-                    <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-                        <table className="w-full border-collapse">
-                            <TableHeader className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-20">
-                                <TableHead className="w-[20%] h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Manufacturer</TableHead>
-                                <TableHead className="w-[20%] h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Model Lineage</TableHead>
-                                <TableHead className="w-[20%] h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Configuration</TableHead>
-                                <TableHead className="w-[20%] h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Classification</TableHead>
-                                <TableHead className="w-[20%] h-12 text-right pr-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</TableHead>
-                            </TableHeader>
-                            <tbody className="divide-y divide-slate-100">
-                                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                    const item = rows[virtualRow.index];
-                                    return (
-                                        <tr
-                                            key={virtualRow.key}
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: `${virtualRow.size}px`,
-                                                transform: `translateY(${virtualRow.start}px)`
-                                            }}
-                                            className="hover:bg-slate-50/50 transition-all duration-200 flex items-center px-4 group border-b border-slate-100/50"
-                                            onClick={() => handleOpenEdit(item)}
-                                        >
-                                            {/* Manufacturer Column */}
-                                            <td className="w-[20%] px-6 py-3">
-                                                <div className="space-y-1.5 truncate">
-                                                    <div className="font-bold text-slate-900 text-[14px] leading-none tracking-tight">
+                <div ref={parentRef} className="flex-1 overflow-auto scroll-smooth relative">
+                    <table className="w-full border-collapse table-fixed">
+                        <TableHeader className="bg-slate-50/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200">
+                            <TableHead className="w-[22%] h-14 text-[10px] font-black uppercase tracking-widest text-slate-500 pl-8">Manufacturer</TableHead>
+                            <TableHead className="w-[22%] h-14 text-[10px] font-black uppercase tracking-widest text-slate-500">Model Lineage</TableHead>
+                            <TableHead className="w-[22%] h-14 text-[10px] font-black uppercase tracking-widest text-slate-500">Configuration</TableHead>
+                            <TableHead className="w-[22%] h-14 text-[10px] font-black uppercase tracking-widest text-slate-500">Classification</TableHead>
+                            <TableHead className="w-[12%] h-14 text-right pr-8 text-[10px] font-black uppercase tracking-widest text-slate-500">Actions</TableHead>
+                        </TableHeader>
+                        <tbody 
+                            className="relative"
+                            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+                        >
+                            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                const item = rows[virtualRow.index];
+                                return (
+                                    <tr
+                                        key={virtualRow.key}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: `${virtualRow.size}px`,
+                                            transform: `translateY(${virtualRow.start}px)`
+                                        }}
+                                        className="hover:bg-indigo-50/30 transition-all duration-150 flex items-center group border-b border-slate-100/60"
+                                        onClick={() => handleOpenEdit(item)}
+                                    >
+                                        {/* Manufacturer Column */}
+                                        <td className="w-[22%] px-8 py-4 overflow-hidden">
+                                            <div className="space-y-1.5">
+                                                <div className="font-black text-slate-900 text-sm leading-tight tracking-tight uppercase">
+                                                    {item.makeEnDesc ? (
                                                         <HighlightText text={item.makeEnDesc} highlight={debouncedSearch} />
-                                                    </div>
-                                                    <div className="text-[12px] text-slate-400 font-sans font-medium opacity-80" dir="rtl">
-                                                        {item.makeArDesc}
-                                                    </div>
-                                                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        <Hash size={10} className="text-slate-400" />
-                                                        <span className="font-mono text-[9px] font-black uppercase tracking-tighter text-slate-500">
-                                                            {item.adpMakeId}
-                                                        </span>
-                                                    </div>
+                                                    ) : (
+                                                        <span className="text-slate-300 font-mono italic text-[11px]">Code: {item.adpMakeId}</span>
+                                                    )}
                                                 </div>
-                                            </td>
-                                            {/* Model Column */}
-                                            <td className="w-[20%] px-6 py-3">
-                                                <div className="space-y-1.5 truncate">
-                                                    <div className="font-bold text-slate-800 text-[14px] leading-none tracking-tight">
+                                                <div className="text-[12px] text-slate-400 font-sans font-bold leading-tight truncate" dir="rtl">
+                                                    {item.makeArDesc || '---'}
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-mono text-[9px] font-black bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200/50 uppercase tracking-tighter">
+                                                        ID: {item.adpMakeId}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {/* Model Column */}
+                                        <td className="w-[22%] px-4 py-4 overflow-hidden">
+                                            <div className="space-y-1.5">
+                                                <div className="font-black text-slate-800 text-sm leading-tight tracking-tight uppercase">
+                                                    {item.modelEnDesc ? (
                                                         <HighlightText text={item.modelEnDesc} highlight={debouncedSearch} />
-                                                    </div>
-                                                    <div className="text-[12px] text-slate-400 font-sans font-medium opacity-80" dir="rtl">
-                                                        {item.modelArDesc}
-                                                    </div>
-                                                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        <Hash size={10} className="text-slate-400" />
-                                                        <span className="font-mono text-[9px] font-black uppercase tracking-tighter text-slate-500">
-                                                            {item.adpModelId}
-                                                        </span>
-                                                    </div>
+                                                    ) : (
+                                                        <span className="text-slate-300 font-mono italic text-[11px]">Code: {item.adpModelId}</span>
+                                                    )}
                                                 </div>
-                                            </td>
-                                            {/* Type Column */}
-                                            <td className="w-[20%] px-6 py-3">
-                                                <div className="space-y-1.5 truncate">
-                                                    <div className="font-bold text-slate-800 text-[14px] leading-none tracking-tight">
+                                                <div className="text-[12px] text-slate-400 font-sans font-bold leading-tight truncate" dir="rtl">
+                                                    {item.modelArDesc || '---'}
+                                                </div>
+                                                <span className="font-mono text-[9px] font-black text-slate-400/80 uppercase tracking-tighter">
+                                                    MOD: {item.adpModelId}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        {/* Type Column */}
+                                        <td className="w-[22%] px-4 py-4 overflow-hidden">
+                                            <div className="space-y-1.5">
+                                                <div className="font-black text-slate-800 text-sm leading-tight tracking-tight uppercase">
+                                                    {item.typeEnDesc ? (
                                                         <HighlightText text={item.typeEnDesc} highlight={debouncedSearch} />
-                                                    </div>
-                                                    <div className="text-[12px] text-slate-400 font-sans font-medium opacity-80" dir="rtl">
-                                                        {item.typeArDesc}
-                                                    </div>
-                                                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        <Hash size={10} className="text-slate-400" />
-                                                        <span className="font-mono text-[9px] font-black uppercase tracking-tighter text-slate-500">
-                                                            {item.adpTypeId}
-                                                        </span>
-                                                    </div>
+                                                    ) : (
+                                                        <span className="text-slate-300 font-mono italic text-[11px]">Code: {item.adpTypeId}</span>
+                                                    )}
                                                 </div>
-                                            </td>
-                                            {/* Kind Column */}
-                                            <td className="w-[20%] px-6 py-3">
-                                                {item.kindCode || item.kindEnDesc ? (
-                                                    <div className="space-y-1.5 truncate">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
-                                                            <div className="font-bold text-indigo-700 text-[13px] leading-none">
-                                                                <HighlightText text={item.kindEnDesc || 'Classified'} highlight={debouncedSearch} />
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-[11px] text-indigo-400 font-sans font-bold opacity-80 pl-3.5" dir="rtl">
-                                                            {item.kindArDesc}
-                                                        </div>
-                                                        <span className="inline-block font-mono text-[9px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded ml-3.5 border border-indigo-100/50">
-                                                            {item.kindCode || '---'}
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-2 text-slate-300 italic text-xs font-medium">
-                                                        <AlertTriangle size={12} /> Uncategorized
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="w-[20%] px-6 py-3 text-right pr-8">
-                                                <div className="flex justify-end gap-1.5">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        className="h-9 w-9 p-0 rounded-full hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-transparent hover:border-indigo-100" 
-                                                        onClick={(e) => handleOpenHistory(e, item.id)}
-                                                        title="Audit Trail"
-                                                    >
-                                                        <Clock size={16} />
-                                                    </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        className="h-9 w-9 p-0 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all border border-transparent hover:border-slate-200" 
-                                                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }}
-                                                        title="Modify Record"
-                                                    >
-                                                        <Edit3 size={16} />
-                                                    </Button>
+                                                <div className="text-[12px] text-slate-400 font-sans font-bold leading-tight truncate" dir="rtl">
+                                                    {item.typeArDesc || '---'}
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                <span className="font-mono text-[9px] font-black text-slate-400/80 uppercase tracking-tighter">
+                                                    TYP: {item.adpTypeId}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        {/* Kind Column */}
+                                        <td className="w-[22%] px-4 py-4 overflow-hidden">
+                                            {item.kindEnDesc || item.kindCode ? (
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                                        <div className="font-black text-indigo-700 text-[13px] leading-tight uppercase truncate">
+                                                            <HighlightText text={item.kindEnDesc || 'Classified'} highlight={debouncedSearch} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-[11px] text-indigo-400/70 font-sans font-bold leading-tight truncate pl-3.5" dir="rtl">
+                                                        {item.kindArDesc || '---'}
+                                                    </div>
+                                                    <span className="inline-block font-mono text-[9px] font-black bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded ml-3.5 border border-indigo-100/50">
+                                                        {item.kindCode || 'NC'}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 text-slate-300 italic text-[11px] font-bold uppercase tracking-wider pl-3.5">
+                                                    <AlertTriangle size={12} className="opacity-50" /> Uncategorized
+                                                </div>
+                                            )}
+                                        </td>
+                                        {/* Actions Column */}
+                                        <td className="w-[12%] px-8 py-4 text-right">
+                                            <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    className="h-9 w-9 p-0 rounded-xl hover:bg-indigo-100 hover:text-indigo-700 transition-all" 
+                                                    onClick={(e) => handleOpenHistory(e, item.id)}
+                                                    title="Audit Trail"
+                                                >
+                                                    <Clock size={16} />
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    className="h-9 w-9 p-0 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm" 
+                                                    onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }}
+                                                    title="Modify Record"
+                                                >
+                                                    <Edit3 size={16} />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
-            <div className="bg-slate-50/50 border-t border-slate-100">
+            <div className="bg-slate-50/80 border-t border-slate-200 px-4">
                 <Pagination 
                     currentPage={page} 
                     totalPages={data?.totalPages || 1} 
@@ -330,7 +336,7 @@ export const ADPMasterView: React.FC = () => {
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Manual edits are logged for compliance</p>
                 <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Discard</Button>
-                    <Button onClick={handleSubmit(onFormSubmit)} className="px-10 bg-slate-900 shadow-md">Commit Record</Button>
+                    <Button onClick={handleSubmit(onFormSubmit)} className="px-10 bg-slate-900 shadow-xl shadow-slate-900/10">Commit Record</Button>
                 </div>
             </div>
         }
