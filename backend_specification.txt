@@ -7,14 +7,14 @@
 - **Role Enforcement**: `ADMIN`, `MAPPING_ADMIN`, `MAPPING_USER`.
 
 ## 2. ADP Master Hub - Bulk Upload Specification
-The system handles raw JSON data payloads for synchronization.
+The system handles raw JSON data payloads for mass synchronization. The frontend transmits the ENTIRE dataset parsed from the source file.
 
 - **Endpoint**: `POST /api/adp/master/bulk-upload`
 - **Consumes**: `application/json`
-- **Payload**: An array of objects representing the source CSV rows.
+- **Payload**: An array of objects representing ALL source CSV rows (Expect up to 15,000+ records in a single call).
 
 ### Backend Processing Requirements:
-1. **JSON Parsing**: The backend should parse the incoming JSON array. Each object will contain keys derived from the CSV headers.
+1. **Unbounded JSON Processing**: The backend MUST NOT limit processing to a default size (like 50). It should iterate through the entire array provided in the request body.
 
 2. **Column Mapping Aliases (Normalized Keys)**:
    The backend should perform case-insensitive matching or normalization of keys:
@@ -37,17 +37,18 @@ The system handles raw JSON data payloads for synchronization.
    - If no match: Insert new record.
 
 4. **Response Structure**:
+   The response must reflect the total count of the entire dataset.
    ```json
    {
      "data": {
-       "recordsAdded": 1200,
-       "recordsSkipped": 50,
+       "recordsAdded": 12450,
+       "recordsSkipped": 1200,
        "errorCount": 5,
-       "message": "Processed 1255 rows. 5 rows failed validation."
+       "message": "Processed 13655 rows. Sync complete."
      }
    }
    ```
 
 ## 3. Performance Targets
 - **Throughput**: 15,000 rows / 10s.
-- **Memory**: The backend should efficiently handle the JSON payload (consider streaming JSON parsing if memory constraints exist).
+- **Memory Management**: The backend should use efficient JSON parsing (e.g., Jackson `MappingIterator` or GSON `JsonReader`) if memory constraints exist, but it MUST process all items in the payload.

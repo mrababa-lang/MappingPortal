@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useADPMaster, useBulkImportADPMaster, useCreateADPMaster, useUpdateADPMaster } from '../hooks/useADPData';
 import { ADPMaster } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, HighlightText, TableSkeleton, EmptyState } from '../components/UI';
-import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock, Layers, Hash, Car, Settings2, Tags, History, FileEdit, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock, Layers, Hash, Car, Settings2, Tags, History, FileEdit, AlertCircle, FileSpreadsheet, ListFilter } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,6 +44,7 @@ export const ADPMasterView: React.FC = () => {
   const [selectedAdpId, setSelectedAdpId] = useState<string | null>(null);
   
   const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<any[] | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [isParsing, setIsParsing] = useState(false);
 
@@ -77,44 +78,53 @@ export const ADPMasterView: React.FC = () => {
     overscan: 10
   });
 
-  const handleBulk = async () => {
-      if(!bulkFile) return;
-      
-      setIsParsing(true);
-      try {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-              const data = e.target?.result;
-              const workbook = XLSX.read(data, { type: 'binary' });
-              const sheetName = workbook.SheetNames[0];
-              const worksheet = workbook.Sheets[sheetName];
-              const jsonData = XLSX.utils.sheet_to_json(worksheet);
-              
-              setIsParsing(false);
-              bulkImport.mutate(jsonData, { 
-                  onSuccess: (result: any) => { 
-                      setUploadResult(result);
-                      setBulkFile(null);
-                      if (result.recordsAdded === 0 && result.recordsSkipped === 0) {
-                          toast.error("Sync complete but 0 records were processed. Check column headers.");
-                      } else {
-                          toast.success(`Successfully synchronized source ledger.`); 
-                      }
-                  },
-                  onError: (err: any) => {
-                    toast.error(err.message || "Bulk synchronization failed");
-                  }
-              });
-          };
-          reader.onerror = () => {
-              setIsParsing(false);
-              toast.error("Failed to read file.");
-          };
-          reader.readAsBinaryString(bulkFile);
-      } catch (err) {
-          setIsParsing(false);
-          toast.error("Error parsing CSV file.");
+  // Automatically parse the file when it is dropped to show row count to user
+  useEffect(() => {
+    if (bulkFile) {
+        setIsParsing(true);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                setParsedData(jsonData);
+            } catch (err) {
+                toast.error("Failed to parse file structure.");
+            } finally {
+                setIsParsing(false);
+            }
+        };
+        reader.readAsBinaryString(bulkFile);
+    } else {
+        setParsedData(null);
+    }
+  }, [bulkFile]);
+
+  const handleBulkSync = () => {
+      if(!parsedData || parsedData.length === 0) {
+          toast.error("No data found to synchronize.");
+          return;
       }
+      
+      // We push the ENTIRE parsedData array (thousands of rows) to the backend
+      bulkImport.mutate(parsedData, { 
+          onSuccess: (result: any) => { 
+              setUploadResult(result);
+              setBulkFile(null);
+              setParsedData(null);
+              if (result.recordsAdded === 0 && result.recordsSkipped === 0) {
+                  toast.error("Sync complete but 0 records were processed by server.");
+              } else {
+                  toast.success(`Successfully synchronized ${result.recordsAdded + result.recordsSkipped} records.`); 
+              }
+          },
+          onError: (err: any) => {
+            toast.error(err.message || "Bulk synchronization failed");
+          }
+      });
   }
 
   const handleDownloadTemplate = () => {
@@ -140,6 +150,7 @@ export const ADPMasterView: React.FC = () => {
     setIsBulkOpen(false);
     setUploadResult(null);
     setBulkFile(null);
+    setParsedData(null);
     setIsParsing(false);
   };
 
@@ -401,6 +412,7 @@ export const ADPMasterView: React.FC = () => {
                     <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2 border-b border-indigo-100 pb-2">
                         <Car className="w-3.5 h-3.5" /> Manufacturer Detail
                     </h3>
+                    <input type="hidden" {...register('id')} />
                     <Input label="Source ID" {...register('adpMakeId')} error={errors.adpMakeId?.message as string} placeholder="e.g. TOY" className="font-mono text-xs" />
                     <Input label="Description (English)" {...register('makeEnDesc')} error={errors.makeEnDesc?.message as string} />
                     <Input label="Description (Arabic)" {...register('makeArDesc')} error={errors.makeArDesc?.message as string} dir="rtl" className="font-sans" />
@@ -436,9 +448,9 @@ export const ADPMasterView: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={isBulkOpen} onClose={handleCloseBulk} title="Direct Bulk Data Synchronizer" footer={
+      <Modal isOpen={isBulkOpen} onClose={handleCloseBulk} title="Mass Data Synchronizer" footer={
           !uploadResult ? (
-             <><Button variant="secondary" onClick={handleCloseBulk}>Cancel</Button><Button onClick={handleBulk} isLoading={bulkImport.isPending || isParsing} className="px-8 shadow-lg shadow-indigo-500/10">Upload & Sync</Button></>
+             <><Button variant="secondary" onClick={handleCloseBulk}>Cancel</Button><Button onClick={handleBulkSync} isLoading={bulkImport.isPending || isParsing} className="px-8 shadow-lg shadow-indigo-500/10" disabled={!parsedData}>Start Bulk Sync</Button></>
           ) : (
              <Button onClick={handleCloseBulk}>Close Wizard</Button>
           )
@@ -449,8 +461,8 @@ export const ADPMasterView: React.FC = () => {
                     <div className="flex gap-4">
                         <Database size={20} className="shrink-0 text-indigo-500" />
                         <div className="space-y-1">
-                            <p className="text-[13px] text-indigo-700 font-bold">JSON Data Processing</p>
-                            <p className="text-[12px] text-indigo-600/80 leading-relaxed">Your CSV will be converted to JSON locally before being transmitted to the backend for high-performance processing.</p>
+                            <p className="text-[13px] text-indigo-700 font-bold">Comprehensive Processing</p>
+                            <p className="text-[12px] text-indigo-600/80 leading-relaxed">The engine will parse every row in your file and push them to the backend in a single synchronized payload.</p>
                         </div>
                     </div>
                     <Button variant="secondary" onClick={handleDownloadTemplate} className="w-full h-9 text-xs border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50">
@@ -464,21 +476,35 @@ export const ADPMasterView: React.FC = () => {
                             <Loader2 className="animate-spin text-indigo-600" size={32} />
                         </div>
                         <p className="text-sm font-black text-slate-700 uppercase tracking-widest animate-pulse">
-                            {isParsing ? 'Parsing CSV Locally...' : 'Syncing JSON Data...'}
+                            {isParsing ? 'Processing Full File...' : 'Synchronizing Thousands of Records...'}
                         </p>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">
-                            Processing source records for transmission...
+                            Communicating with secure data nodes...
                         </p>
                     </div>
                  ) : (
-                    <div className="p-10 bg-slate-50 border-2 border-slate-200 rounded-2xl border-dashed flex flex-col items-center justify-center transition-all hover:bg-slate-100 group cursor-pointer relative">
-                        <Upload size={48} className="text-slate-300 mb-4 group-hover:text-indigo-400 group-hover:-translate-y-1 transition-all" />
-                        <p className="text-sm font-bold text-slate-700 mb-1">Drop your ADP Master CSV here</p>
-                        <p className="text-xs text-slate-400 mb-6">File will be parsed to JSON and handled by the server</p>
-                        <input type="file" accept=".csv" onChange={e => setBulkFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                        {bulkFile && (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-xs animate-in zoom-in-95">
-                                <CheckCircle2 size={14} /> {bulkFile.name} (Ready to Parse)
+                    <div className="space-y-4">
+                        <div className="p-10 bg-slate-50 border-2 border-slate-200 rounded-2xl border-dashed flex flex-col items-center justify-center transition-all hover:bg-slate-100 group cursor-pointer relative">
+                            <Upload size={48} className="text-slate-300 mb-4 group-hover:text-indigo-400 group-hover:-translate-y-1 transition-all" />
+                            <p className="text-sm font-bold text-slate-700 mb-1">Select your ADP Master CSV</p>
+                            <p className="text-xs text-slate-400 mb-6">Drag and drop or click to browse</p>
+                            <input type="file" accept=".csv" onChange={e => setBulkFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                            {bulkFile && (
+                                <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold text-xs animate-in zoom-in-95">
+                                    <CheckCircle2 size={14} /> {bulkFile.name} detected
+                                </div>
+                            )}
+                        </div>
+
+                        {parsedData && (
+                            <div className="p-4 bg-slate-900 rounded-xl flex items-center justify-between border border-slate-700 shadow-xl">
+                                <div className="flex items-center gap-3">
+                                    <ListFilter size={18} className="text-indigo-400" />
+                                    <span className="text-xs font-black text-white uppercase tracking-widest">Pre-Sync Analysis:</span>
+                                </div>
+                                <div className="px-3 py-1 bg-indigo-500 rounded text-[11px] font-black text-white shadow-lg shadow-indigo-500/20">
+                                    {parsedData.length.toLocaleString()} RECORDS READY
+                                </div>
                             </div>
                         )}
                     </div>
@@ -486,33 +512,33 @@ export const ADPMasterView: React.FC = () => {
              </div>
          ) : (
              <div className="space-y-6 py-4">
-                <div className={`p-5 rounded-2xl flex items-center gap-4 ${uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'bg-rose-50 border border-rose-100' : uploadResult.errorCount > 0 ? 'bg-amber-50 border border-amber-100' : 'bg-emerald-50 border border-emerald-100'}`}>
-                   <div className={`p-3 rounded-xl shadow-inner ${uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'bg-rose-100 text-rose-600' : uploadResult.errorCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                        {uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? <AlertCircle size={24}/> : uploadResult.errorCount > 0 ? <AlertTriangle size={24}/> : <CheckCircle2 size={24}/>}
+                <div className={`p-5 rounded-2xl flex items-center gap-4 ${uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'bg-rose-50 border border-rose-100' : 'bg-emerald-50 border border-emerald-100'}`}>
+                   <div className={`p-3 rounded-xl shadow-inner ${uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? <AlertCircle size={24}/> : <CheckCircle2 size={24}/>}
                    </div>
                    <div>
                        <h3 className="font-black text-slate-800 text-lg leading-none mb-1">
-                            {uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'Zero Records Processed' : 'Synchronization Complete'}
+                            {uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'Zero Records Processed' : 'Mass Synchronization Complete'}
                        </h3>
                        <p className="text-sm text-slate-500 font-medium">
-                            {uploadResult.message || 'Backend handler completed the ledger synchronization.'}
+                            {uploadResult.message || 'The server has processed the entire dataset successfully.'}
                        </p>
                    </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                    <Card className="p-6 bg-white border-slate-100 text-center shadow-sm">
-                      <span className="block text-4xl font-black text-emerald-600 tabular-nums mb-1">{uploadResult.recordsAdded || 0}</span>
+                      <span className="block text-4xl font-black text-emerald-600 tabular-nums mb-1">{uploadResult.recordsAdded?.toLocaleString() || 0}</span>
                       <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Successfully Merged</span>
                    </Card>
                    <Card className="p-6 bg-white border-slate-100 text-center shadow-sm">
-                      <span className="block text-4xl font-black text-slate-300 tabular-nums mb-1">{uploadResult.recordsSkipped || 0}</span>
-                      <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Validated Unchanged</span>
+                      <span className="block text-4xl font-black text-slate-300 tabular-nums mb-1">{uploadResult.recordsSkipped?.toLocaleString() || 0}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Verified Unchanged</span>
                    </Card>
                 </div>
 
                 <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total File Integrity Check Complete</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Data Integrity Verification Complete</p>
                     {uploadResult.errorCount > 0 && (
                         <span className="text-[10px] font-black bg-rose-100 text-rose-600 px-2 py-0.5 rounded uppercase">{uploadResult.errorCount} Rows Failed Validation</span>
                     )}
