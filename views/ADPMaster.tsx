@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useADPMaster, useBulkImportADPMaster, useCreateADPMaster, useUpdateADPMaster } from '../hooks/useADPData';
 import { ADPMaster } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, HighlightText, TableSkeleton, EmptyState } from '../components/UI';
-import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock, Layers, Hash, Car, Settings2, Tags, History, FileEdit, AlertCircle } from 'lucide-react';
+import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock, Layers, Hash, Car, Settings2, Tags, History, FileEdit, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -86,8 +86,8 @@ export const ADPMasterView: React.FC = () => {
                   setUploadResult(result);
                   setBulkFile(null);
                   setSyncProgress(0);
-                  if (result.failedChunks > 0 || result.errorCount > 0) {
-                      toast.warning(`Sync partially complete with some validation errors.`);
+                  if (result.recordsAdded === 0 && result.recordsSkipped === 0) {
+                      toast.error("Sync complete but 0 records were processed. Check column headers.");
                   } else {
                       toast.success(`Successfully synchronized source ledger.`); 
                   }
@@ -99,6 +99,25 @@ export const ADPMasterView: React.FC = () => {
           });
       }
   }
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+        "adpMakeId", "makeEnDesc", "makeArDesc", 
+        "adpModelId", "modelEnDesc", "modelArDesc", 
+        "adpTypeId", "typeEnDesc", "typeArDesc", 
+        "kindCode", "kindEnDesc", "kindArDesc"
+    ].join(",");
+    const sample = "TOY,Toyota,تويوتا,CAM-2024,Camry SE,كامري,1,Sedan,سيدان,K1,Passenger,ركاب";
+    const csvContent = "\uFEFF" + headers + "\n" + sample;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "adp_master_template.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleCloseBulk = () => {
     setIsBulkOpen(false);
@@ -409,9 +428,17 @@ export const ADPMasterView: React.FC = () => {
       }>
          {!uploadResult ? (
              <div className="space-y-5">
-                 <div className="p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-[13px] text-indigo-700 flex gap-4 leading-relaxed">
-                    <Database size={20} className="shrink-0 text-indigo-500" />
-                    <p><strong>Raw Format Support:</strong> Upload your CSV file directly. The backend handling engine will automatically process all mappings and classification updates in the original source format.</p>
+                 <div className="p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex flex-col gap-4">
+                    <div className="flex gap-4">
+                        <Database size={20} className="shrink-0 text-indigo-500" />
+                        <div className="space-y-1">
+                            <p className="text-[13px] text-indigo-700 font-bold">Raw Format Integrity</p>
+                            <p className="text-[12px] text-indigo-600/80 leading-relaxed">Upload your CSV. The backend handles fuzzy mapping for columns like <strong>"Kind Code"</strong> or <strong>"kindendesc"</strong> automatically.</p>
+                        </div>
+                    </div>
+                    <Button variant="secondary" onClick={handleDownloadTemplate} className="w-full h-9 text-xs border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50">
+                        <FileSpreadsheet size={14} /> Download Verified CSV Template
+                    </Button>
                  </div>
 
                  {syncProgress > 0 ? (
@@ -445,27 +472,27 @@ export const ADPMasterView: React.FC = () => {
              </div>
          ) : (
              <div className="space-y-6 py-4">
-                <div className={`p-5 rounded-2xl flex items-center gap-4 ${uploadResult.errorCount > 0 ? 'bg-amber-50 border border-amber-100' : 'bg-emerald-50 border border-emerald-100'}`}>
-                   <div className={`p-3 rounded-xl shadow-inner ${uploadResult.errorCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                        {uploadResult.errorCount > 0 ? <AlertCircle size={24}/> : <CheckCircle2 size={24}/>}
+                <div className={`p-5 rounded-2xl flex items-center gap-4 ${uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'bg-rose-50 border border-rose-100' : uploadResult.errorCount > 0 ? 'bg-amber-50 border border-amber-100' : 'bg-emerald-50 border border-emerald-100'}`}>
+                   <div className={`p-3 rounded-xl shadow-inner ${uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'bg-rose-100 text-rose-600' : uploadResult.errorCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? <AlertCircle size={24}/> : uploadResult.errorCount > 0 ? <AlertTriangle size={24}/> : <CheckCircle2 size={24}/>}
                    </div>
                    <div>
                        <h3 className="font-black text-slate-800 text-lg leading-none mb-1">
-                            Synchronization Processed
+                            {uploadResult.recordsAdded === 0 && uploadResult.recordsSkipped === 0 ? 'Zero Records Processed' : 'Synchronization Complete'}
                        </h3>
                        <p className="text-sm text-slate-500 font-medium">
-                            Backend handler completed the ledger synchronization.
+                            {uploadResult.message || 'Backend handler completed the ledger synchronization.'}
                        </p>
                    </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                    <Card className="p-6 bg-white border-slate-100 text-center shadow-sm">
-                      <span className="block text-4xl font-black text-emerald-600 tabular-nums mb-1">{uploadResult.recordsAdded || uploadResult.successCount || 0}</span>
+                      <span className="block text-4xl font-black text-emerald-600 tabular-nums mb-1">{uploadResult.recordsAdded || 0}</span>
                       <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Successfully Merged</span>
                    </Card>
                    <Card className="p-6 bg-white border-slate-100 text-center shadow-sm">
-                      <span className="block text-4xl font-black text-slate-300 tabular-nums mb-1">{uploadResult.recordsSkipped || uploadResult.skippedCount || 0}</span>
+                      <span className="block text-4xl font-black text-slate-300 tabular-nums mb-1">{uploadResult.recordsSkipped || 0}</span>
                       <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Validated Unchanged</span>
                    </Card>
                 </div>

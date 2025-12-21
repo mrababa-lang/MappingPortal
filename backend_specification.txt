@@ -1,0 +1,55 @@
+# SlashData Vehicle Portal - Backend Technical Specification
+
+## 1. Authentication & Security
+- **Mechanism**: Stateless JWT (JSON Web Token).
+- **Endpoint**: `POST /api/auth/login`
+- **Role Enforcement**: `ADMIN`, `MAPPING_ADMIN`, `MAPPING_USER`.
+
+## 2. ADP Master Hub - Bulk Upload Specification
+The system handles raw multipart CSV uploads. Given inconsistent source formatting, the backend MUST implement fuzzy header mapping.
+
+- **Endpoint**: `POST /api/adp/master/bulk-upload`
+- **Consumes**: `multipart/form-data` (field: `file`)
+
+### Backend Processing Requirements:
+1. **Fuzzy Header Normalization**: 
+   Before processing, the backend must normalize all CSV headers by:
+   - Converting to lowercase.
+   - Removing all spaces and underscores.
+   - Example: "Kind Code" becomes "kindcode", "kindEnDesc" becomes "kindendesc".
+
+2. **Column Mapping Aliases**:
+   Map normalized headers to the following internal fields:
+   - `adpMakeId`: "adpmakeid", "makecode", "makeid"
+   - `makeEnDesc`: "makeendesc", "descen", "makeen"
+   - `makeArDesc`: "makeardesc", "descar", "makear"
+   - `adpModelId`: "adpmodelid", "modelcode", "modelid"
+   - `modelEnDesc`: "modelendesc", "modeldescen"
+   - `modelArDesc`: "modelardesc", "modeldescar"
+   - `adpTypeId`: "adptypeid", "typecode", "typeid"
+   - `typeEnDesc`: "typeendesc", "typedescen"
+   - `typeArDesc`: "typeardesc", "typedescar"
+   - `kindCode`: "kindcode", "classificationcode"
+   - `kindEnDesc`: "kindendesc", "classificationen"
+   - `kindArDesc`: "kindardesc", "kinddescar", "classificationar"
+
+3. **Upsert Strategy**:
+   - **Unique Key**: Composite of (`adpMakeId`, `adpModelId`, `adpTypeId`).
+   - If match found: Update descriptions and Kind/Classification fields.
+   - If no match: Insert new record.
+
+4. **Response Structure**:
+   ```json
+   {
+     "data": {
+       "recordsAdded": 1200,
+       "recordsSkipped": 50,
+       "errorCount": 5,
+       "message": "Processed 1255 rows. 5 rows failed validation."
+     }
+   }
+   ```
+
+## 3. Performance Targets
+- **Throughput**: 15,000 rows / 10s.
+- **Memory**: Use Streaming API (do not load full file into RAM).
