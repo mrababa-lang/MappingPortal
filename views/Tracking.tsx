@@ -53,7 +53,9 @@ export const TrackingView: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [historyTargetId, setHistoryTargetId] = useState<string | null>(null);
 
-  const { data: users = [] } = useUsers();
+  const { data: usersData = [] } = useUsers();
+  const users = Array.isArray(usersData) ? usersData : [];
+  
   const { data: stats } = useDashboardStats();
   const { data: activityTrend = [] } = useActivityLog();
   const { data: mappingsData, isLoading } = useADPMappings({
@@ -66,9 +68,9 @@ export const TrackingView: React.FC = () => {
 
   const performanceData = useMemo(() => {
     // Group activity by user for performance metrics
-    if (!users.length || !mappingsData?.content) return [];
+    if (!users || users.length === 0) return [];
     return users.map(user => ({
-      name: user.fullName.split(' ')[0],
+      name: (user.fullName || 'Unknown').split(' ')[0],
       mappings: Math.floor(Math.random() * 50) + 10, // Mocked for performance view demo
       accuracy: Math.floor(Math.random() * 20) + 80
     }));
@@ -88,7 +90,7 @@ export const TrackingView: React.FC = () => {
     <div className="space-y-6">
        <div className="flex justify-between items-end">
         <div>
-           <h1 className="text-2xl font-bold text-slate-900">Activity Tracking & Audit</h1>
+           <h1 className="text-2xl font-bold text-slash-dark">Activity Tracking & Audit</h1>
            <p className="text-slate-500 text-sm">Real-time mapping surveillance, diff analysis, and performance auditing.</p>
         </div>
         <div className="flex gap-2">
@@ -233,26 +235,30 @@ export const TrackingView: React.FC = () => {
             <div className="flex-1 overflow-auto">
                 <div className="divide-y divide-slate-100">
                     {(mappingsData?.content || []).map((m: any) => {
+                         const recordId = m?.id || m?.adpId || 'unknown';
                          const user = users.find(u => u.id === m.updatedBy);
-                         const isExpanded = expandedId === m.id;
-                         // Mocking sources for demo
-                         const source = m.id.length % 3 === 0 ? 'AI' : m.id.length % 5 === 0 ? 'BULK' : 'MANUAL';
+                         const isExpanded = expandedId === recordId;
+                         
+                         // Mocking sources for demo - using defensive check for recordId
+                         const source = recordId.length % 3 === 0 ? 'AI' : recordId.length % 5 === 0 ? 'BULK' : 'MANUAL';
                          
                          return (
-                             <div key={m.id} className={`transition-all ${isExpanded ? 'bg-indigo-50/20' : 'hover:bg-slate-50/50'}`}>
+                             <div key={recordId} className={`transition-all ${isExpanded ? 'bg-indigo-50/20' : 'hover:bg-slate-50/50'}`}>
                                  <div 
                                     className="px-6 py-4 flex items-center justify-between cursor-pointer"
-                                    onClick={() => toggleExpand(m.id)}
+                                    onClick={() => toggleExpand(recordId)}
                                  >
                                      <div className="flex items-center gap-4 flex-1">
                                          <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-900 text-sm">{m.makeEnDesc} {m.modelEnDesc}</span>
+                                                <span className="font-bold text-slate-900 text-sm">
+                                                  {(m.makeEnDesc || '')} {(m.modelEnDesc || 'Unknown Record')}
+                                                </span>
                                                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
                                                     {getSourceIcon(source)} {source}
                                                 </div>
                                             </div>
-                                            <span className="text-[11px] text-slate-400 font-mono mt-0.5">{m.adpMakeId} / {m.adpModelId}</span>
+                                            <span className="text-[11px] text-slate-400 font-mono mt-0.5">{m.adpMakeId || 'N/A'} / {m.adpModelId || 'N/A'}</span>
                                          </div>
                                      </div>
 
@@ -260,7 +266,7 @@ export const TrackingView: React.FC = () => {
                                          <div className="hidden md:flex flex-col items-end">
                                              <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${m.status === 'MAPPED' ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                 <span className={`w-1.5 h-1.5 rounded-full ${m.status === 'MAPPED' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                                {m.status}
+                                                {m.status || 'UNMAPPED'}
                                              </div>
                                              <span className="text-[10px] text-slate-400 mt-0.5">{m.updatedAt ? new Date(m.updatedAt).toLocaleTimeString() : '-'}</span>
                                          </div>
@@ -276,7 +282,7 @@ export const TrackingView: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="text-slate-300">
-                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                {isExpanded ? <ChevronDown className="rotate-180" size={16} /> : <ChevronDown size={16} />}
                                             </div>
                                          </div>
                                      </div>
@@ -292,7 +298,7 @@ export const TrackingView: React.FC = () => {
                                                  <Button 
                                                     variant="ghost" 
                                                     className="h-7 text-[10px] gap-1 px-2 border border-slate-100 hover:border-slate-300"
-                                                    onClick={(e) => { e.stopPropagation(); setHistoryTargetId(m.id); }}
+                                                    onClick={(e) => { e.stopPropagation(); setHistoryTargetId(recordId); }}
                                                  >
                                                     <History size={12} /> View Full Timeline
                                                  </Button>
