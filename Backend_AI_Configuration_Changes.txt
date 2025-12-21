@@ -1,26 +1,32 @@
 
-# Backend Changes: AI Intelligence & Customization
+# Backend Changes: AI Intelligence, Keys & Customization
 
 ## 1. Database Schema Updates (`app_config` table)
-The following columns must be added to support the new portal settings:
+To support the enhanced configuration portal, the `app_config` table requires the following modifications:
 
-- `ai_provider`: ENUM('gemini', 'openai') DEFAULT 'gemini'. 
-- `system_instruction`: TEXT. To store the global system prompt used for AI interactions.
-- `ai_api_key`: TEXT (Encrypted). While the frontend uses ENV variables, the backend should support project-level key overrides stored in the DB (AES encrypted).
+- `ai_provider`: ENUM('gemini', 'openai') DEFAULT 'gemini'.
+- `system_instruction`: TEXT. Stores the persistent base prompt injected into all AI calls.
+- `gemini_api_key`: TEXT (Encrypted). Stored using AES-256 encryption.
+- `openai_api_key`: TEXT (Encrypted). Stored using AES-256 encryption.
+- `ai_confidence_threshold`: INT DEFAULT 70.
 
 ## 2. API Endpoint: `GET /api/config/test-ai-connection`
-Implement a new diagnostic endpoint that:
-1.  Retrieves the active `ai_provider` and `system_instruction`.
-2.  Performs a "dry run" or a low-token request (e.g., "Respond with 'pong'").
-3.  **Gemini logic**: Use Google GenAI SDK to send a simple content generation request.
-4.  **OpenAI logic**: Call the `/v1/chat/completions` endpoint.
-5.  Returns `200 OK` with JSON `{ "status": "success", "latency": 123 }` or `500 Error` with descriptive failure details.
+Implement a diagnostic route to verify the operational status of the AI sub-systems:
+- **Inputs**: `provider` (optional, defaults to active provider).
+- **Logic**: 
+    1. Retrieve the encrypted key for the specified provider from the DB.
+    2. Decrypt the key and initialize the corresponding SDK (Google GenAI or OpenAI).
+    3. Execute a "Ping" prompt (e.g., "Respond with 'pong'") with `maxOutputTokens: 5`.
+    4. Calculate the round-trip latency.
+- **Response**: `{ "status": "success", "latency": 150, "provider": "gemini" }` or `500 Internal Server Error` with detailed error logs.
 
-## 3. Dynamic Prompt Injection Logic
-In the AI Matching and Description Generation services:
-- Before sending the prompt to Gemini/OpenAI, fetch the `system_instruction` from the cached `AppConfig`.
-- For Gemini: Set the `systemInstruction` field in the `generateContent` configuration.
-- For OpenAI: Inject a message with `role: "system"` as the first item in the message array.
+## 3. Dynamic Service Logic (AI Gateway)
+Refactor the `AIOrchestrationService` (Java/Spring) to act as a dynamic gateway:
+- **Provider Switching**: Based on the `ai_provider` flag in `AppConfig`, route requests to either `GeminiClient` or `OpenAIClient`.
+- **Instruction Injection**: 
+    - For **Gemini**: Pass the `system_instruction` string into the `config.systemInstruction` field of the request.
+    - For **OpenAI**: Prepend a message with `role: "system"` and `content: system_instruction` to the message array.
 
-## 4. Audit Log Enrichment
-- Log every change to the `system_instruction` in the audit log, as a poorly configured prompt can significantly degrade mapping accuracy or increase API costs.
+## 4. Key Management Security
+- **Encryption**: Keys must NEVER be stored in plain text. Use a system-level environment variable as the AES encryption key.
+- **Obfuscation**: The `GET /api/config` endpoint should return keys masked (e.g., `sk-proj-****...`) unless the request is made by a user with `SUPER_ADMIN` privileges.

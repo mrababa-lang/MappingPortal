@@ -104,7 +104,8 @@ export interface User {
 export interface AppConfig {
   enableAI: boolean;
   aiProvider: 'gemini' | 'openai';
-  apiKey?: string;
+  geminiApiKey?: string;
+  openaiApiKey?: string;
   aiConfidenceThreshold: number; // 0-100
   systemInstruction: string;
   maintenanceMode: boolean;

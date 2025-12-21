@@ -1,4 +1,3 @@
-
 # SlashData Vehicle Portal - Enhancement Roadmap
 
 This document outlines the current feature set of the portal and provides a detailed backlog of potential design, functional, and architectural improvements for each view.
@@ -95,11 +94,18 @@ This document outlines the current feature set of the portal and provides a deta
 ---
 
 ## 8. Configuration & System
-**Current State:** AI settings, maintenance mode, and audit logging toggles.
+**Current State:** AI provider switching and system instruction customization implemented.
 - **Design Enhancements:**
-    - Grouping settings into "General," "AI Model," and "Security" sections.
+    - **Logical Partitioning**: Group settings into distinct tabs or sections: "AI Intelligence Core," "System Operations," and "Security Credentials."
+    - **Credential Obfuscation**: Password-style masking for API keys with toggle icon for secure viewing.
 - **Functional Additions:**
-    - "Backup & Restore": System-wide DB snapshot trigger.
-    - "AI Prompt Customization": Allow admins to tweak the instructions sent to Gemini.
+    - **Multi-Provider Key Management**: Integrated support for storing and managing separate `Gemini API Key` and `OpenAI API Key` credentials.
+    - **Live AI Toggle**: Instant switching between Google Gemini and ChatGPT as the active mapping engine.
+    - **Prompt Customization Engine**:
+        - **System Instruction Editor**: Advanced text area for viewing and editing the base instructions sent to the AI (e.g., "You are a specialized vehicle data cleaning agent...").
+        - **Instruction Diffs**: Track changes to system prompts in the audit log.
+    - **Diagnostics**:
+        - **Test API Connection**: Trigger real-time connectivity tests to verify both key validity and model response latency.
 - **UX Improvements:**
-    - "Test API Connection" button to verify backend availability and AI credentials.
+    - **Diagnostic Pulse**: Real-time visual indicators of system health and API availability directly in the settings dashboard.
+    - **Security Policy Toggles**: Direct access to Maintenance Mode and Audit Logging flags.
