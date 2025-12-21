@@ -17,7 +17,7 @@ import {
   Key, 
   Eye, 
   EyeOff, 
-  MessageSquareCode,
+  Code,
   CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -148,7 +148,7 @@ export const ConfigurationView: React.FC = () => {
 
                <div className="space-y-4 pt-4 border-t border-slate-50">
                   <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                      <MessageSquareCode size={14} className="text-slate-400" /> AI Prompt Customization
+                      <Code size={14} className="text-slate-400" /> AI Prompt Customization
                   </h3>
                   <TextArea 
                       label="Global System Instruction"
