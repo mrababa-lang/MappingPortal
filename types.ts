@@ -48,6 +48,10 @@ export interface ADPMaster {
   adpTypeId: string;
   typeArDesc: string;
   typeEnDesc: string;
+  // Kind (New Fields)
+  kindCode?: string;
+  kindEnDesc?: string;
+  kindArDesc?: string;
 }
 
 export type MappingStatus = 'MAPPED' | 'MISSING_MAKE' | 'MISSING_MODEL';

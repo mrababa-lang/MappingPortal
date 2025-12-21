@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { useADPUniqueMakes, useSaveMakeMapping, useDashboardStats, downloadADPMakesReport } from '../hooks/useADPData';
 import { useMakes } from '../hooks/useVehicleData';
 import { Card, Button, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, SearchableSelect, Input, Select, EmptyState } from '../components/UI';
-import { Edit2, Link, CheckCircle2, AlertTriangle, RefreshCw, Search, Loader2, Car, Factory, PieChart, Download, X } from 'lucide-react';
+import { Edit2, Link, CheckCircle2, AlertTriangle, RefreshCw, Search, Loader2, Car, Factory, PieChart, Download, X, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const ADPMakesView: React.FC = () => {
@@ -23,8 +24,8 @@ export const ADPMakesView: React.FC = () => {
 
   const handleOpenModal = (item: any) => {
     setSelectedAdpMake(item);
-    // Use optional chaining in case sdMakeId is not yet in response, defaults to empty
-    setSelectedSdMakeId(item.sdMakeId || '');
+    // Use loose check for existing mapping
+    setSelectedSdMakeId(String(item.sdMakeId || ''));
     setIsModalOpen(true);
   };
 
@@ -37,7 +38,7 @@ export const ADPMakesView: React.FC = () => {
     }, {
         onSuccess: () => {
             setIsModalOpen(false);
-            toast.success("Make mapping saved");
+            toast.success("Make mapping synchronized successfully");
             refetch();
         }
     });
@@ -47,9 +48,9 @@ export const ADPMakesView: React.FC = () => {
     setIsExporting(true);
     try {
         await downloadADPMakesReport(statusFilter);
-        toast.success("Report downloaded");
+        toast.success("Make report generated and downloaded.");
     } catch (e) {
-        toast.error("Export failed");
+        toast.error("Export operation failed.");
     } finally {
         setIsExporting(false);
     }
@@ -64,18 +65,17 @@ export const ADPMakesView: React.FC = () => {
   // KPI Calculations
   const sdTotal = stats?.totalMakes || 0;
   const adpTotal = stats?.adpTotalMakes || 0;
-  // If backend provides adpMappedMakes use it, otherwise fallback to 0 or manual calculation if possible
   const adpMapped = stats?.adpMappedMakes || 0;
   const coveragePercent = adpTotal > 0 ? Math.round((adpMapped / adpTotal) * 100) : 0;
 
   const StatCard = ({ label, value, subValue, icon: Icon, color, bg }: any) => (
       <Card className="p-5 flex items-start justify-between">
           <div>
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">{label}</p>
-              <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
-              {subValue && <p className="text-xs text-slate-400 mt-1">{subValue}</p>}
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{label}</p>
+              <h3 className="text-2xl font-bold text-slate-800 tracking-tight">{value}</h3>
+              {subValue && <p className="text-xs text-slate-400 mt-1 font-medium">{subValue}</p>}
           </div>
-          <div className={`p-3 rounded-xl ${bg} ${color}`}>
+          <div className={`p-3 rounded-xl ${bg} ${color} shadow-sm`}>
               <Icon size={24} />
           </div>
       </Card>
@@ -83,16 +83,16 @@ export const ADPMakesView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-           <h1 className="text-2xl font-bold text-slate-900">ADP Makes</h1>
-           <p className="text-slate-500">Manage unique manufacturer mappings from ADP Master Data.</p>
+           <h1 className="text-2xl font-bold text-slate-900">ADP Make Mapping</h1>
+           <p className="text-slate-500 text-sm font-medium">Synchronize source manufacturer codes with SlashData master hierarchies.</p>
         </div>
-        <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => refetch()}>
+        <div className="flex gap-2 w-full md:w-auto">
+            <Button variant="secondary" onClick={() => refetch()} className="flex-1 md:flex-none">
               <RefreshCw size={16} /> Refresh
             </Button>
-            <Button variant="primary" onClick={handleExport} isLoading={isExporting}>
+            <Button variant="primary" onClick={handleExport} isLoading={isExporting} className="flex-1 md:flex-none">
               <Download size={16} /> Export CSV
             </Button>
         </div>
@@ -101,17 +101,17 @@ export const ADPMakesView: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          <StatCard 
-            label="SlashData Makes" 
+            label="SlashData Master" 
             value={sdTotal} 
-            subValue="Target System"
+            subValue="Verified Target Hierarchy"
             icon={Car} 
             color="text-blue-600" 
             bg="bg-blue-50"
          />
          <StatCard 
-            label="ADP Unique Makes" 
+            label="ADP Source Makes" 
             value={adpTotal} 
-            subValue="Source System"
+            subValue="Unique ERP Manufacturers"
             icon={Factory} 
             color="text-purple-600" 
             bg="bg-purple-50"
@@ -119,7 +119,7 @@ export const ADPMakesView: React.FC = () => {
          <StatCard 
             label="Mapping Coverage" 
             value={`${coveragePercent}%`}
-            subValue={`${adpMapped} of ${adpTotal} mapped`}
+            subValue={`${adpMapped} of ${adpTotal} aligned`}
             icon={PieChart} 
             color={coveragePercent > 80 ? "text-emerald-600" : "text-amber-600"} 
             bg={coveragePercent > 80 ? "bg-emerald-50" : "bg-amber-50"}
@@ -132,91 +132,115 @@ export const ADPMakesView: React.FC = () => {
              <div className="w-full md:flex-1 relative">
                 <Search className="absolute top-9 left-3 text-slate-400" size={18} />
                 <Input 
-                  label="Search" 
-                  placeholder="Search ADP or SlashData make..." 
+                  label="Dynamic Search" 
+                  placeholder="Filter by ADP Code or Name..." 
                   value={searchQuery}
                   onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
-                  className="pl-10"
+                  className="pl-10 h-11"
                 />
              </div>
              <div className="w-full md:w-64">
                  <Select 
-                    label="Status"
+                    label="Alignment Status"
                     value={statusFilter}
                     onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                     options={[
                         {value: 'all', label: 'All Records'},
                         {value: 'mapped', label: 'Mapped'},
-                        {value: 'unmapped', label: 'Unmapped / Pending'}
+                        {value: 'unmapped', label: 'Pending Alignment'}
                     ]}
+                    className="h-11"
                  />
              </div>
              {(searchQuery || statusFilter !== 'all') && (
-                 <Button variant="ghost" onClick={resetFilters} className="text-red-500 h-[42px] mb-0.5">
-                     <X size={16} /> Clear Filters
+                 <Button variant="ghost" onClick={resetFilters} className="text-rose-600 h-11 mb-0.5 px-4 font-bold hover:bg-rose-50 rounded-lg">
+                     <X size={16} /> Clear
                  </Button>
              )}
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
-        {isLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin" /></div> : (
+      <Card className="overflow-hidden border border-slate-200 shadow-sm">
+        {isLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-slate-400" /></div> : (
         <>
             {(data?.content || []).length === 0 ? (
                 <EmptyState 
-                    title="No Records Found" 
-                    description="Try adjusting your filters or search query." 
+                    title="No Alignment Records Found" 
+                    description="Adjust your search criteria or synchronize master data from the source ERP." 
                     icon={Search}
                 />
             ) : (
                 <div className="overflow-x-auto">
                 <table className="w-full">
-                    <TableHeader>
-                    <TableHead>ADP Make ID</TableHead>
-                    <TableHead>English Description</TableHead>
-                    <TableHead>Arabic Description</TableHead>
-                    <TableHead>SlashData Mapping</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHeader className="bg-slate-50/50">
+                        <TableHead className="w-[15%]">ADP Source ID</TableHead>
+                        <TableHead className="w-[30%]">ADP Description (EN/AR)</TableHead>
+                        <TableHead className="w-[35%]">SlashData Mapping</TableHead>
+                        <TableHead className="w-[10%]">Status</TableHead>
+                        <TableHead className="w-[10%] text-right">Actions</TableHead>
                     </TableHeader>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                     {(data?.content || []).map((item: any) => {
-                        // Use loose equality (==) to handle potential string vs number ID mismatches
-                        const mappedSdMake = sdMakes.find(m => m.id == item.sdMakeId);
+                        const mappedSdMake = sdMakes.find(m => String(m.id) === String(item.sdMakeId));
                         return (
-                        <TableRow key={item.adpMakeId || item.id} onClick={() => handleOpenModal(item)}>
+                        <TableRow key={item.adpMakeId || item.id} onClick={() => handleOpenModal(item)} className="group">
                             <TableCell>
-                            <span className="font-mono text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-1 rounded">
-                                {item.adpMakeId}
-                            </span>
+                                <span className="font-mono text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200 px-2 py-1 rounded">
+                                    {item.adpMakeId}
+                                </span>
                             </TableCell>
-                            <TableCell><span className="font-medium text-slate-900">{item.adpMakeName || item.enDescription || item.makeEnDesc}</span></TableCell>
-                            <TableCell><span className="text-slate-600 font-sans" dir="rtl">{item.arDescription || item.makeArDesc || '-'}</span></TableCell>
+                            <TableCell>
+                                <div className="space-y-0.5">
+                                    <div className="font-bold text-slate-900 text-sm leading-tight">
+                                        {item.adpMakeName || item.makeEnDesc || item.enDescription}
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 font-sans" dir="rtl">
+                                        {item.makeArDesc || item.arDescription || '-'}
+                                    </div>
+                                </div>
+                            </TableCell>
                             <TableCell>
                             {mappedSdMake ? (
-                                <div className="flex items-center gap-2 text-indigo-700 font-medium">
-                                <CheckCircle2 size={16} className="text-emerald-500" />
-                                {mappedSdMake.name}
+                                <div className="flex items-start gap-3">
+                                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+                                        <Car size={14} />
+                                    </div>
+                                    <div className="space-y-0.5 overflow-hidden">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-indigo-700 text-sm leading-tight truncate">{mappedSdMake.name}</span>
+                                            <span className="text-[9px] font-mono font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded shadow-sm">
+                                                ID: {mappedSdMake.id}
+                                            </span>
+                                        </div>
+                                        {mappedSdMake.nameAr && (
+                                            <div className="text-[11px] text-slate-400 font-sans truncate" dir="rtl">
+                                                {mappedSdMake.nameAr}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ) : (
-                                <span className="text-slate-400 italic">Not Mapped</span>
+                                <div className="flex items-center gap-2 text-slate-300 italic text-sm">
+                                    <AlertTriangle size={14} /> 
+                                    <span>Unlinked Record</span>
+                                </div>
                             )}
                             </TableCell>
                             <TableCell>
-                            {mappedSdMake ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                Mapped
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                                <AlertTriangle size={12} /> Pending
-                                </span>
-                            )}
+                                {mappedSdMake ? (
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                        Mapped
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-100">
+                                        Pending
+                                    </span>
+                                )}
                             </TableCell>
-                            <TableCell>
-                            <Button variant="ghost" className="p-2 h-auto text-indigo-600 hover:bg-indigo-50" onClick={(e) => { e.stopPropagation(); handleOpenModal(item); }}>
-                                <Link size={16} />
-                            </Button>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" className="h-9 w-9 p-0 rounded-full hover:bg-indigo-50 group-hover:scale-110 transition-transform" onClick={(e) => { e.stopPropagation(); handleOpenModal(item); }}>
+                                    <Link size={16} className="text-slate-400 group-hover:text-indigo-600" />
+                                </Button>
                             </TableCell>
                         </TableRow>
                         );
@@ -225,7 +249,9 @@ export const ADPMakesView: React.FC = () => {
                 </table>
                 </div>
             )}
-            <Pagination currentPage={page} totalPages={data?.totalPages || 1} onPageChange={setPage} totalItems={data?.totalElements || 0} />
+            <div className="bg-slate-50/30">
+                <Pagination currentPage={page} totalPages={data?.totalPages || 1} onPageChange={setPage} totalItems={data?.totalElements || 0} />
+            </div>
         </>
         )}
       </Card>
@@ -233,38 +259,52 @@ export const ADPMakesView: React.FC = () => {
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        title="Map ADP Make"
+        title="Establish Make Alignment"
         footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveMapping} disabled={!selectedSdMakeId}>Save Mapping</Button>
-          </>
+          <div className="flex justify-between items-center w-full">
+            <p className="text-[10px] text-slate-400 font-medium italic">Changes are audited in real-time.</p>
+            <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveMapping} disabled={!selectedSdMakeId} className="px-8 shadow-lg shadow-slate-900/10">Save Linkage</Button>
+            </div>
+          </div>
         }
       >
         <div className="space-y-6">
           {selectedAdpMake && (
-             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <div className="text-xs font-bold text-slate-400 uppercase mb-2">ADP Source Data</div>
-                <div className="grid grid-cols-2 gap-4">
+             <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 bg-slate-200/50 text-[9px] font-black text-slate-500 uppercase tracking-tighter rounded-bl-lg">ADP SOURCE</div>
+                <div className="grid grid-cols-2 gap-8 relative z-10">
                    <div>
-                     <span className="text-xs text-slate-500 block">Make ID</span>
-                     <span className="font-mono font-medium text-slate-900">{selectedAdpMake.adpMakeId}</span>
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Source Make ID</span>
+                     <span className="font-mono font-bold text-slate-900 text-sm bg-white px-2 py-1 rounded border border-slate-200">{selectedAdpMake.adpMakeId}</span>
                    </div>
                    <div>
-                     <span className="text-xs text-slate-500 block">Description</span>
-                     <span className="font-medium text-slate-900">{selectedAdpMake.adpMakeName || selectedAdpMake.enDescription || selectedAdpMake.makeEnDesc}</span>
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Source Descriptions</span>
+                     <div className="font-bold text-slate-900 leading-tight">{selectedAdpMake.adpMakeName || selectedAdpMake.makeEnDesc || selectedAdpMake.enDescription}</div>
+                     <div className="text-[11px] text-slate-500 font-sans mt-1" dir="rtl">{selectedAdpMake.makeArDesc || selectedAdpMake.arDescription}</div>
                    </div>
                 </div>
              </div>
           )}
-          <div className="space-y-2">
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2 mb-1">
+                <Hash size={14} className="text-indigo-500" />
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest">Select Target SlashData Make</h3>
+            </div>
             <SearchableSelect 
-               label="Map to SlashData Make"
+               label=""
                value={selectedSdMakeId}
                onChange={value => setSelectedSdMakeId(value)}
-               options={sdMakes.map(m => ({ value: m.id, label: m.name }))}
-               placeholder="Search for manufacturer..."
+               options={sdMakes.map(m => ({ 
+                   value: String(m.id), 
+                   label: `${m.name} (${m.nameAr || ''}) [ID: ${m.id}]` 
+               }))}
+               placeholder="Dynamic manufacturer search..."
             />
+            <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                Mapping an ADP record to a SlashData make ensures that all vehicle models associated with this manufacturer can be correctly resolved in subsequent mapping stages.
+            </p>
           </div>
         </div>
       </Modal>

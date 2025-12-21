@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useADPMaster, useBulkImportADPMaster, useCreateADPMaster, useUpdateADPMaster } from '../hooks/useADPData';
 import { ADPMaster } from '../types';
 import { Card, Button, Input, Modal, TableHeader, TableHead, TableRow, TableCell, Pagination, HighlightText, TableSkeleton, EmptyState } from '../components/UI';
-import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock } from 'lucide-react';
+import { Upload, Search, Loader2, Download, CheckCircle2, AlertTriangle, Plus, Edit3, X, Database, Clock, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +23,9 @@ const adpMasterSchema = z.object({
   adpTypeId: commonValidators.requiredString,
   typeEnDesc: commonValidators.requiredString,
   typeArDesc: commonValidators.arabicText,
+  kindCode: z.string().optional().or(z.literal('')),
+  kindEnDesc: z.string().optional().or(z.literal('')),
+  kindArDesc: commonValidators.arabicText,
 });
 
 type ADPMasterFormData = z.infer<typeof adpMasterSchema>;
@@ -64,7 +67,7 @@ export const ADPMasterView: React.FC = () => {
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 64,
+    estimateSize: () => 72, // Increased size for bilingual rows
     overscan: 10
   });
 
@@ -91,7 +94,8 @@ export const ADPMasterView: React.FC = () => {
       reset({
         adpMakeId: '', makeEnDesc: '', makeArDesc: '',
         adpModelId: '', modelEnDesc: '', modelArDesc: '',
-        adpTypeId: '', typeEnDesc: '', typeArDesc: ''
+        adpTypeId: '', typeEnDesc: '', typeArDesc: '',
+        kindCode: '', kindEnDesc: '', kindArDesc: ''
       });
     }
     setIsEditModalOpen(true);
@@ -122,8 +126,8 @@ export const ADPMasterView: React.FC = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = "adpMakeId,makeEnDesc,makeArDesc,adpModelId,modelEnDesc,modelArDesc,adpTypeId,typeEnDesc,typeArDesc";
-    const sample = "TOY-01,Toyota,تويوتا,LC-200,Land Cruiser,لاند كروزر,SUV,SUV,دفع رباعي";
+    const headers = "adpMakeId,makeEnDesc,makeArDesc,adpModelId,modelEnDesc,modelArDesc,adpTypeId,typeEnDesc,typeArDesc,kindCode,kindEnDesc,kindArDesc";
+    const sample = "TOY-01,Toyota,تويوتا,LC-200,Land Cruiser,لاند كروزر,SUV,SUV,دفع رباعي,K-01,Standard,قياسي";
     const csvContent = "\uFEFF" + headers + "\n" + sample;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -140,7 +144,7 @@ export const ADPMasterView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
         <div>
            <h1 className="text-2xl font-bold text-slate-900">ADP Master List</h1>
-           <p className="text-slate-500">Source data integration with upsert capability and history audit.</p>
+           <p className="text-slate-500 text-sm">Comprehensive vehicle source data with bilingual descriptions and categorization.</p>
         </div>
         <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setIsBulkOpen(true)}><Upload size={18} /> Bulk Update</Button>
@@ -154,7 +158,7 @@ export const ADPMasterView: React.FC = () => {
                 <Search className="absolute top-3 left-3 text-slate-400" size={18} />
                 <Input 
                     label="" 
-                    placeholder="Search Make, Model, or ID..." 
+                    placeholder="Search Make, Model, Type or Kind..." 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
                     className="pl-10 h-11"
@@ -172,7 +176,7 @@ export const ADPMasterView: React.FC = () => {
       </Card>
 
       <Card className="flex-1 overflow-hidden flex flex-col min-h-0 border border-slate-200">
-        {isLoading ? <TableSkeleton rows={12} cols={4} /> : (
+        {isLoading ? <TableSkeleton rows={12} cols={5} /> : (
         <>
             {rows.length === 0 ? (
                 <EmptyState 
@@ -186,10 +190,11 @@ export const ADPMasterView: React.FC = () => {
                     <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         <table className="w-full">
                             <TableHeader>
-                                <TableHead className="w-1/4">Manufacturer (ADP)</TableHead>
-                                <TableHead className="w-1/4">Model Description</TableHead>
-                                <TableHead className="w-1/4">Vehicle Type</TableHead>
-                                <TableHead className="w-1/4 text-right">Actions</TableHead>
+                                <TableHead className="w-[20%]">Manufacturer</TableHead>
+                                <TableHead className="w-[20%]">Model</TableHead>
+                                <TableHead className="w-[20%]">Vehicle Type</TableHead>
+                                <TableHead className="w-[20%]">Kind / Category</TableHead>
+                                <TableHead className="w-[20%] text-right">Actions</TableHead>
                             </TableHeader>
                             <tbody>
                                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -208,37 +213,63 @@ export const ADPMasterView: React.FC = () => {
                                             className="border-b border-slate-100 hover:bg-slate-50 flex items-center px-4"
                                             onClick={() => handleOpenEdit(item)}
                                         >
-                                            <td className="w-1/4 px-6 py-2">
+                                            {/* Manufacturer Column */}
+                                            <td className="w-[20%] px-6 py-2">
                                                 <div className="space-y-0.5 truncate">
-                                                    <div className="font-bold text-slate-900 text-sm">
+                                                    <div className="font-bold text-slate-900 text-[13px] leading-tight">
                                                         <HighlightText text={item.makeEnDesc} highlight={debouncedSearch} />
                                                     </div>
-                                                    <span className="font-mono text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded leading-none">
-                                                        <HighlightText text={item.adpMakeId} highlight={debouncedSearch} />
+                                                    <div className="text-[11px] text-slate-400 font-sans" dir="rtl">
+                                                        {item.makeArDesc}
+                                                    </div>
+                                                    <span className="font-mono text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
+                                                        {item.adpMakeId}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="w-1/4 px-6 py-2">
+                                            {/* Model Column */}
+                                            <td className="w-[20%] px-6 py-2">
                                                 <div className="space-y-0.5 truncate">
-                                                    <div className="font-medium text-slate-700 text-sm">
+                                                    <div className="font-medium text-slate-700 text-[13px] leading-tight">
                                                         <HighlightText text={item.modelEnDesc} highlight={debouncedSearch} />
                                                     </div>
-                                                    <span className="font-mono text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded leading-none">
-                                                        <HighlightText text={item.adpModelId} highlight={debouncedSearch} />
+                                                    <div className="text-[11px] text-slate-400 font-sans" dir="rtl">
+                                                        {item.modelArDesc}
+                                                    </div>
+                                                    <span className="font-mono text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
+                                                        {item.adpModelId}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="w-1/4 px-6 py-2">
+                                            {/* Type Column */}
+                                            <td className="w-[20%] px-6 py-2">
                                                 <div className="space-y-0.5 truncate">
-                                                    <div className="font-medium text-slate-700 text-sm">
+                                                    <div className="font-medium text-slate-700 text-[13px] leading-tight">
                                                         <HighlightText text={item.typeEnDesc} highlight={debouncedSearch} />
                                                     </div>
-                                                    <span className="font-mono text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded leading-none">
+                                                    <div className="text-[11px] text-slate-400 font-sans" dir="rtl">
+                                                        {item.typeArDesc}
+                                                    </div>
+                                                    <span className="font-mono text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded">
                                                         {item.adpTypeId}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="w-1/4 px-6 py-2 text-right">
+                                            {/* Kind Column (New) */}
+                                            <td className="w-[20%] px-6 py-2">
+                                                <div className="space-y-0.5 truncate">
+                                                    <div className="font-medium text-indigo-600 text-[12px] leading-tight">
+                                                        <HighlightText text={item.kindEnDesc || 'N/A'} highlight={debouncedSearch} />
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 font-sans" dir="rtl">
+                                                        {item.kindArDesc}
+                                                    </div>
+                                                    <span className="font-mono text-[9px] bg-indigo-50 text-indigo-400 px-1 py-0.5 rounded">
+                                                        {item.kindCode || '---'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="w-[20%] px-6 py-2 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-indigo-50" onClick={(e) => handleOpenHistory(e, item.id)}>
                                                         <Clock size={14} className="text-slate-400" />
@@ -274,26 +305,35 @@ export const ADPMasterView: React.FC = () => {
         footer={<Button onClick={handleSubmit(onFormSubmit)} className="px-12">Save Record</Button>}
       >
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Manufacturer Info</h3>
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest border-b pb-1">Manufacturer Info</h3>
                     <Input label="ADP Make ID" {...register('adpMakeId')} error={errors.adpMakeId?.message as string} placeholder="e.g. TOY" />
                     <Input label="Make Desc (EN)" {...register('makeEnDesc')} error={errors.makeEnDesc?.message as string} />
                     <Input label="Make Desc (AR)" {...register('makeArDesc')} error={errors.makeArDesc?.message as string} dir="rtl" />
                 </div>
                 <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Model Info</h3>
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest border-b pb-1">Model Info</h3>
                     <Input label="ADP Model ID" {...register('adpModelId')} error={errors.adpModelId?.message as string} placeholder="e.g. LC-200" />
                     <Input label="Model Desc (EN)" {...register('modelEnDesc')} error={errors.modelEnDesc?.message as string} />
                     <Input label="Model Desc (AR)" {...register('modelArDesc')} error={errors.modelArDesc?.message as string} dir="rtl" />
                 </div>
             </div>
-            <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest pb-1">Classification Info</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t">
+                <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest border-b pb-1">Classification Info</h3>
                     <Input label="ADP Type ID" {...register('adpTypeId')} error={errors.adpTypeId?.message as string} />
                     <Input label="Type Desc (EN)" {...register('typeEnDesc')} error={errors.typeEnDesc?.message as string} />
                     <Input label="Type Desc (AR)" {...register('typeArDesc')} error={errors.typeArDesc?.message as string} dir="rtl" />
+                </div>
+                <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest border-b pb-1 flex items-center gap-2">
+                        <Layers size={14} /> Kind / Category Info
+                    </h3>
+                    <Input label="Kind Code" {...register('kindCode')} error={errors.kindCode?.message as string} placeholder="e.g. K-01" />
+                    <Input label="Kind Desc (EN)" {...register('kindEnDesc')} error={errors.kindEnDesc?.message as string} />
+                    <Input label="Kind Desc (AR)" {...register('kindArDesc')} error={errors.kindArDesc?.message as string} dir="rtl" />
                 </div>
             </div>
         </div>
@@ -310,7 +350,7 @@ export const ADPMasterView: React.FC = () => {
              <div className="space-y-4">
                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 flex gap-2">
                     <Database size={16} className="shrink-0" />
-                    <p><strong>Upsert Logic:</strong> Uploading records with existing IDs will update the descriptions. New IDs will be added as fresh master records.</p>
+                    <p><strong>Upsert Logic:</strong> Uploading records with existing IDs will update the descriptions. New IDs will be added as fresh master records. Ensure Kind fields are included for full synchronization.</p>
                  </div>
 
                  <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded">

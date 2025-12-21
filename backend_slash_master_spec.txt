@@ -1,0 +1,27 @@
+
+# SlashData Master Data List - Backend Specification
+
+## Overview
+The SlashData Master Data view provides a read-only, consolidated view of internal vehicle hierarchies (Makes > Models > Types) and includes integrated metadata from ADP master records where applicable.
+
+## API Endpoints
+
+### 1. GET /api/master/vehicles
+- **Purpose**: Fetch paginated, joined vehicle records.
+- **Query Params**: `page`, `size`, `q` (search), `makeId`, `typeId`.
+- **Logic**:
+    - Perform a `JOIN` across `sd_makes`, `sd_models`, and `sd_vehicle_types`.
+    - Join with `adp_master` or `adp_mappings` if users want to see coverage (optional based on view context).
+- **Return Fields**:
+    - `modelId`, `modelName`, `modelNameAr`
+    - `makeId`, `makeName`, `makeNameAr`
+    - `typeId`, `typeName`, `typeNameAr`
+    - `kindCode`, `kindEnDesc`, `kindArDesc` (Source fields from linked ADP master)
+
+### 2. GET /api/master/vehicles/export
+- **Purpose**: Export the entire joined hierarchy.
+- **Logic**: Returns a stream of CSV data formatted for Excel consumption.
+
+## Database Considerations
+- Ensure indexes exist on `model.make_id` and `model.type_id`.
+- Use a View or Materialized View if the join performance degrades on large datasets.

@@ -1,44 +1,39 @@
 
-# ADP Master List - Backend Specification
+# ADP Master List - Backend Specification (V2)
 
 ## Overview
-The ADP Master List serves as the source of truth for all vehicle metadata originating from external ERP systems. The system must support granular single-record updates via form and large-scale bulk synchronization with upsert (merge) logic.
+The ADP Master List serves as the source of truth for all vehicle metadata originating from external ERP systems. The system supports bilingual descriptions for Makes, Models, and Types, and includes a new "Kind" classification.
+
+## Data Model (Fields)
+- `adpMakeId` (String): Unique manufacturer code from source.
+- `makeEnDesc` / `makeArDesc` (String): Bilingual manufacturer descriptions.
+- `adpModelId` (String): Unique model code from source.
+- `modelEnDesc` / `modelArDesc` (String): Bilingual model descriptions.
+- `adpTypeId` (String): Unique body-style/type code from source.
+- `typeEnDesc` / `typeArDesc` (String): Bilingual type descriptions.
+- **NEW**: `kindCode` (String): Classification code for internal categorization.
+- **NEW**: `kindEnDesc` / `kindArDesc` (String): Bilingual category descriptions.
 
 ## API Endpoints
 
 ### 1. GET /api/adp/master
 - **Purpose**: Fetch paginated master records.
 - **Query Params**: `page`, `size`, `q` (search term).
-- **Search Logic**: Fuzzy match across `adpMakeId`, `makeEnDesc`, `adpModelId`, `modelEnDesc`.
+- **Search Logic**: Fuzzy match across `adpMakeId`, `makeEnDesc`, `adpModelId`, `modelEnDesc`, `kindEnDesc`.
 
 ### 2. POST /api/adp/master
 - **Purpose**: Manual creation of a single master record.
-- **Payload**: JSON matching ADPMaster interface.
-- **Validation**: Ensure `adpMakeId` + `adpModelId` combination is unique to avoid logical duplicates.
+- **Validation**: Ensure `adpMakeId` + `adpModelId` combination is unique.
 
 ### 3. PUT /api/adp/master/{id}
-- **Purpose**: Update any field of an existing record.
-- **Logic**: Find record by ID and perform a partial or full update.
-- **Auditing**: Must trigger an entry in `ADPHistory` tracking the specific changes.
+- **Purpose**: Update an existing record.
+- **Auditing**: Generate diff entries in `adp_history`.
 
 ### 4. POST /api/adp/master/bulk
-- **Purpose**: Large scale data synchronization.
-- **Logic**:
-    1. Iterate through JSON payload.
-    2. Check if a record with the same `adpMakeId` and `adpModelId` exists.
-    3. **IF EXISTS**: Update the existing record with the new English/Arabic descriptions and Type ID.
-    4. **IF NOT EXISTS**: Create a new record.
-- **Response**: Return a summary JSON: `{ "recordsAdded": N, "recordsSkipped": M, "message": "..." }`.
+- **Purpose**: Sync with upsert logic.
+- **Logic**: Match by `adpMakeId` + `adpModelId`. If exists, update all fields including new Kind fields.
 
-## Database Schema Considerations
+## Database Schema (DDL)
 - Table: `adp_master`
-- Indexes:
-    - Primary: `id` (UUID or Serial)
-    - Unique Constraint: `(adp_make_id, adp_model_id)`
-    - B-Tree Index: `adp_make_id` for quick manufacturer filtering.
-
-## Auditing Integration
-Every `PUT` or `POST` action on the ADP Master list must generate a row in the `adp_history` table:
-- `timestamp`: now()
-- `action`: "CREATED" | "UPDATED" | "SYNCED"
-- `details`: JSON string or text describing which fields changed.
+- Columns added: `kind_code` VARCHAR(50), `kind_en_desc` TEXT, `kind_ar_desc` TEXT.
+- Index: B-Tree index on `kind_code` for optimized filtering.
