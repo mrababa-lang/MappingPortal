@@ -185,10 +185,10 @@ export const ADPMakesView: React.FC = () => {
                             <TableCell>
                                 <div className="space-y-1">
                                     <div className="font-bold text-slate-900 text-sm leading-tight">
-                                        {item.makeEnDesc || item.adpMakeName || item.enDescription || 'Unnamed'}
+                                        {item.makeEnDesc || item.adpMakeName || item.enDescription || item.name || 'Unnamed'}
                                     </div>
                                     <div className="text-[11px] text-slate-400 font-sans font-medium" dir="rtl">
-                                        {item.makeArDesc || item.arDescription || 'غير مسمى'}
+                                        {item.makeArDesc || item.arDescription || item.nameAr || item.arName || 'غير مسمى'}
                                     </div>
                                 </div>
                             </TableCell>
@@ -274,8 +274,8 @@ export const ADPMakesView: React.FC = () => {
                    </div>
                    <div>
                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Source Descriptions</span>
-                     <div className="font-black text-slate-900 leading-tight text-base mb-1">{selectedAdpMake.makeEnDesc || selectedAdpMake.adpMakeName || selectedAdpMake.enDescription}</div>
-                     <div className="text-sm text-slate-500 font-sans font-medium" dir="rtl">{selectedAdpMake.makeArDesc || selectedAdpMake.arDescription || 'غير مسمى'}</div>
+                     <div className="font-black text-slate-900 leading-tight text-base mb-1">{selectedAdpMake.makeEnDesc || selectedAdpMake.adpMakeName || selectedAdpMake.enDescription || selectedAdpMake.name}</div>
+                     <div className="text-sm text-slate-500 font-sans font-medium" dir="rtl">{selectedAdpMake.makeArDesc || selectedAdpMake.arDescription || selectedAdpMake.nameAr || selectedAdpMake.arName || 'غير مسمى'}</div>
                    </div>
                 </div>
              </div>
