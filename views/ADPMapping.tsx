@@ -48,8 +48,7 @@ export const ADPMappingView: React.FC = () => {
       statusFilter, dateFrom, dateTo, q
   });
   
-  // Update makes access to handle paginated object
-  const { data: makesData } = useMakes({ size: 1000 }); // Large size for dropdowns
+  const { data: makesData } = useMakes({ size: 1000 }); 
   const makes = makesData?.content || [];
   
   const { data: models = [] } = useModels();
@@ -66,8 +65,8 @@ export const ADPMappingView: React.FC = () => {
   const handleOpenModal = (item: any) => {
       setSelectedItem(item);
       setMappingState({
-          makeId: item.makeId || item.sdMakeId || '',
-          modelId: item.modelId || item.sdModelId || ''
+          makeId: String(item.makeId || item.sdMakeId || ''),
+          modelId: String(item.modelId || item.sdModelId || '')
       });
       setIsModalOpen(true);
   }
@@ -107,16 +106,26 @@ export const ADPMappingView: React.FC = () => {
         const description = `${selectedItem.makeEnDesc} ${selectedItem.modelEnDesc} ${selectedItem.typeEnDesc || ''}`;
         const result = await suggestMapping(description);
         if (result && result.make) {
-            const foundMake = makes.find(m => m.name.toLowerCase().includes(result.make.toLowerCase()) || result.make.toLowerCase().includes(m.name.toLowerCase()));
+            const foundMake = makes.find(m => 
+              m.name.toLowerCase().includes(result.make.toLowerCase()) || 
+              result.make.toLowerCase().includes(m.name.toLowerCase()) ||
+              String(m.id).toLowerCase() === result.make.toLowerCase()
+            );
+            
             if (foundMake) {
                 let foundModel = null;
                 if (result.model) {
-                   foundModel = models.find(m => 
-                       ((m.makeId || (m.make && m.make.id)) == foundMake.id) && 
-                       (m.name.toLowerCase().includes(result.model.toLowerCase()) || result.model.toLowerCase().includes(m.name.toLowerCase()))
-                   );
+                   foundModel = models.find(m => {
+                       const mMakeId = String(m.makeId || (m.make && m.make.id) || '');
+                       return (mMakeId === String(foundMake.id)) && 
+                       (m.name.toLowerCase().includes(result.model.toLowerCase()) || result.model.toLowerCase().includes(m.name.toLowerCase()));
+                   });
                 }
-                setMappingState(prev => ({ ...prev, makeId: foundMake.id, modelId: foundModel ? foundModel.id : prev.modelId }));
+                setMappingState(prev => ({ 
+                  ...prev, 
+                  makeId: String(foundMake.id), 
+                  modelId: foundModel ? String(foundModel.id) : prev.modelId 
+                }));
                 toast.success(`AI Suggestion: ${foundMake.name} ${foundModel ? foundModel.name : ''}`);
             } else {
                 toast.error(`AI found "${result.make}" but it does not match any existing Make.`);
@@ -279,8 +288,18 @@ export const ADPMappingView: React.FC = () => {
                  )}
              </div>
              <div className="grid grid-cols-1 gap-5 pt-2">
-                <SearchableSelect label="Target Make (Required)" value={mappingState.makeId} onChange={v => setMappingState({...mappingState, makeId: v, modelId: ''})} options={(Array.isArray(makes) ? makes : []).map(m => ({value: m.id, label: m.name}))} placeholder="Search manufacturers..." />
-                <SearchableSelect label="Target Model (Required)" value={mappingState.modelId} onChange={v => setMappingState({...mappingState, modelId: v})} disabled={!mappingState.makeId} options={(Array.isArray(models) ? models : []).filter(m => (m.makeId || (m.make && m.make.id)) == mappingState.makeId).map(m => ({value: m.id, label: m.name}))} placeholder={mappingState.makeId ? "Search models..." : "Select a Make first"} />
+                <SearchableSelect label="Target Make (Required)" value={mappingState.makeId} onChange={v => setMappingState({...mappingState, makeId: v, modelId: ''})} options={makes.map(m => ({value: String(m.id), label: m.name}))} placeholder="Search manufacturers..." />
+                <SearchableSelect 
+                  label="Target Model (Required)" 
+                  value={mappingState.modelId} 
+                  onChange={v => setMappingState({...mappingState, modelId: v})} 
+                  disabled={!mappingState.makeId} 
+                  options={models.filter(m => {
+                    const mMakeId = String(m.makeId || (m.make && m.make.id) || '');
+                    return mMakeId === String(mappingState.makeId);
+                  }).map(m => ({value: String(m.id), label: m.name}))} 
+                  placeholder={mappingState.makeId ? "Search models..." : "Select a Make first"} 
+                />
              </div>
              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[11px] text-blue-700 leading-relaxed">
                 <strong>Note:</strong> Saving this mapping will set its status to <strong>MAPPED</strong> and send it to the <strong>Review Queue</strong> for final verification.

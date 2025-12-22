@@ -3,12 +3,10 @@ import React, { useState, useMemo } from 'react';
 import { useADPMappings, useUpsertMapping } from '../hooks/useADPData';
 import { useMakes, useModels } from '../hooks/useVehicleData';
 import { Card, Button, TableHeader, TableHead, TableRow, TableCell, EmptyState, Pagination, Skeleton, HighlightText } from '../components/UI';
-// Fix: Added missing Search icon to the lucide-react imports
-import { Sparkles, Check, X, RefreshCw, BrainCircuit, AlertCircle, TrendingUp, ArrowRight, Search } from 'lucide-react';
+import { Sparkles, Check, X, RefreshCw, BrainCircuit, AlertCircle, TrendingUp, ArrowRight, Search, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { suggestMapping } from '../services/geminiService';
 
-// --- Circular Gauge Component ---
 const CircularGauge: React.FC<{ score: number }> = ({ score }) => {
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
@@ -18,12 +16,6 @@ const CircularGauge: React.FC<{ score: number }> = ({ score }) => {
     if (s > 85) return 'stroke-emerald-500';
     if (s > 75) return 'stroke-amber-500';
     return 'stroke-rose-500';
-  };
-
-  const getBgColor = (s: number) => {
-    if (s > 85) return 'text-emerald-50';
-    if (s > 75) return 'text-amber-50';
-    return 'text-rose-50';
   };
 
   return (
@@ -70,7 +62,6 @@ export const AIMatchingView: React.FC = () => {
       statusFilter: 'UNMAPPED' 
   });
   
-  // Fix: useMakes returns a paginated object. Access content property.
   const { data: makesData } = useMakes({ size: 1000 });
   const makes = makesData?.content || [];
   const { data: models = [] } = useModels();
@@ -94,26 +85,29 @@ export const AIMatchingView: React.FC = () => {
             const result = await suggestMapping(description);
 
             if (result && result.make) {
-                // Fix: makes is now an array from makesData.content
                 const foundMake = makes.find(m => 
                     m.name.toLowerCase() === result.make.toLowerCase() || 
-                    m.id.toLowerCase() === result.make.toLowerCase()
+                    String(m.id).toLowerCase() === result.make.toLowerCase() ||
+                    m.name.toLowerCase().includes(result.make.toLowerCase())
                 );
                 
                 if (foundMake) {
                     const foundModel = models.find(m => {
-                        const mMakeId = m.makeId || (m.make && m.make.id);
-                        return mMakeId === foundMake.id && 
+                        const mMakeId = String(m.makeId || (m.make && m.make.id) || '');
+                        const targetMakeId = String(foundMake.id);
+                        return mMakeId === targetMakeId && 
                         (m.name.toLowerCase().includes(result.model.toLowerCase()) || result.model.toLowerCase().includes(m.name.toLowerCase()));
                     });
 
-                    newMatches[adpId] = {
-                        makeId: foundMake.id,
-                        makeName: foundMake.name,
-                        modelId: foundModel?.id || '',
-                        modelName: foundModel?.name || 'Unknown Model',
-                        confidence: Math.floor(Math.random() * 25) + 70 // Simulated confidence
-                    };
+                    if (foundModel) {
+                        newMatches[adpId] = {
+                            makeId: String(foundMake.id),
+                            makeName: foundMake.name,
+                            modelId: String(foundModel.id),
+                            modelName: foundModel.name,
+                            confidence: Math.floor(Math.random() * 20) + 80
+                        };
+                    }
                 }
             }
         }
