@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { User, AppConfig } from '../types';
+import { User, AppConfig, AuditLog, AuditPerformance } from '../types';
 import { toast } from 'sonner';
 
 // Helper to normalize array responses
@@ -83,4 +84,38 @@ export const useUpdateAppConfig = () => {
             queryClient.invalidateQueries({ queryKey: ['appConfig'] });
         }
     });
+};
+
+export const useAuditLogs = (params: { page: number, size: number, userId?: string, source?: string, dateFrom?: string, dateTo?: string }) => {
+  return useQuery({
+    queryKey: ['auditLogs', params],
+    queryFn: async () => {
+      const { data } = await api.get('/audit/logs', { 
+        params: {
+          page: params.page - 1,
+          size: params.size,
+          userId: params.userId,
+          source: params.source === 'all' ? undefined : params.source,
+          dateFrom: params.dateFrom,
+          dateTo: params.dateTo
+        } 
+      });
+      const content = normalizeArray(data);
+      return {
+          content,
+          totalPages: data.totalPages ?? 1,
+          totalElements: data.totalElements ?? content.length
+      };
+    }
+  });
+};
+
+export const useAuditPerformance = () => {
+  return useQuery({
+    queryKey: ['auditPerformance'],
+    queryFn: async () => {
+      const { data } = await api.get('/audit/performance');
+      return normalizeObject(data) as AuditPerformance;
+    }
+  });
 };

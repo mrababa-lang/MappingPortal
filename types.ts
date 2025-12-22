@@ -105,6 +105,33 @@ export interface User {
   lastActive: string;
 }
 
+export interface AuditLog {
+  id: string;
+  entityType: 'ADP_MASTER' | 'SD_MAKE' | 'SD_MODEL' | 'MAPPING';
+  entityId: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT';
+  source: 'MANUAL' | 'AI' | 'BULK';
+  userId: string;
+  userFullName?: string;
+  oldValues: any;
+  newValues: any;
+  ipAddress?: string;
+  userAgent?: string;
+  timestamp: string;
+}
+
+export interface AuditPerformance {
+  userMetrics: {
+    userId: string;
+    userName: string;
+    mappingsCount: number;
+    accuracyScore: number;
+  }[];
+  totalIntegrityScore: number;
+  manualAccuracy: number;
+  aiPrecision: number;
+}
+
 export interface AppConfig {
   enableAI: boolean;
   apiKey?: string; // Dynamic key from backend

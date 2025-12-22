@@ -1,44 +1,53 @@
 
 import React, { useState, useMemo } from 'react';
-import { useADPMappings, useDashboardStats, useActivityLog } from '../hooks/useADPData';
-import { useUsers } from '../hooks/useAdminData';
-import { Card, Select, Input, Pagination, TableHeader, TableHead, TableRow, TableCell, Button } from '../components/UI';
+import { useAuditLogs, useAuditPerformance, useUsers } from '../hooks/useAdminData';
+import { AuditLog } from '../types';
+import { Card, Select, Input, Pagination, TableHeader, TableHead, TableRow, TableCell, Button, Skeleton } from '../components/UI';
 import { 
   Activity, 
   Clock, 
-  Calendar, 
   Filter, 
   Loader2, 
-  ArrowRight, 
   History, 
   ChevronDown, 
-  ChevronUp, 
   User as UserIcon, 
   Zap, 
   MousePointer2, 
   FileJson,
   TrendingUp,
-  Download
+  Download,
+  Database,
+  Car,
+  Settings2,
+  Link as LinkIcon,
+  ShieldCheck,
+  Monitor
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { HistoryModal } from '../components/HistoryModal';
 
 interface DiffRowProps {
   label: string;
-  oldValue: string;
-  newValue: string;
+  oldValue: any;
+  newValue: any;
 }
 
 const DiffRow: React.FC<DiffRowProps> = ({ label, oldValue, newValue }) => {
-  const isChanged = oldValue !== newValue;
+  const isChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
+  const formatVal = (v: any) => {
+    if (v === null || v === undefined) return '(empty)';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  };
+
   return (
     <div className="grid grid-cols-3 gap-4 py-2 text-xs border-b border-slate-50 last:border-0">
-      <div className="font-bold text-slate-500 uppercase tracking-tighter">{label}</div>
-      <div className={`px-2 py-0.5 rounded ${isChanged ? 'bg-red-50 text-red-700 line-through opacity-60' : 'text-slate-400'}`}>
-        {oldValue || '(empty)'}
+      <div className="font-bold text-slate-500 uppercase tracking-tighter truncate" title={label}>{label}</div>
+      <div className={`px-2 py-0.5 rounded truncate ${isChanged ? 'bg-rose-50 text-rose-700 line-through opacity-60' : 'text-slate-400'}`}>
+        {formatVal(oldValue)}
       </div>
-      <div className={`px-2 py-0.5 rounded ${isChanged ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600'}`}>
-        {newValue || '(empty)'}
+      <div className={`px-2 py-0.5 rounded truncate ${isChanged ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600'}`}>
+        {formatVal(newValue)}
       </div>
     </div>
   );
@@ -56,25 +65,24 @@ export const TrackingView: React.FC = () => {
   const { data: usersData = [] } = useUsers();
   const users = Array.isArray(usersData) ? usersData : [];
   
-  const { data: stats } = useDashboardStats();
-  const { data: activityTrend = [] } = useActivityLog();
-  const { data: mappingsData, isLoading } = useADPMappings({
+  const { data: performance, isLoading: perfLoading } = useAuditPerformance();
+  const { data: logsData, isLoading: logsLoading } = useAuditLogs({
     page,
     size: 20,
     userId: selectedUser || undefined,
+    source: actionSource,
     dateFrom,
     dateTo
   });
 
-  const performanceData = useMemo(() => {
-    // Group activity by user for performance metrics
-    if (!users || users.length === 0) return [];
-    return users.map(user => ({
-      name: (user.fullName || 'Unknown').split(' ')[0],
-      mappings: Math.floor(Math.random() * 50) + 10, // Mocked for performance view demo
-      accuracy: Math.floor(Math.random() * 20) + 80
+  const chartData = useMemo(() => {
+    if (!performance?.userMetrics) return [];
+    return performance.userMetrics.map(m => ({
+      name: m.userName.split(' ')[0],
+      mappings: m.mappingsCount,
+      accuracy: m.accuracyScore
     }));
-  }, [users, mappingsData]);
+  }, [performance]);
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -86,36 +94,58 @@ export const TrackingView: React.FC = () => {
     return <MousePointer2 size={14} className="text-emerald-500" />;
   };
 
+  const getEntityIcon = (type: string) => {
+    switch(type) {
+      case 'ADP_MASTER': return <Database size={14} className="text-blue-500" />;
+      case 'SD_MAKE': return <Car size={14} className="text-indigo-500" />;
+      case 'SD_MODEL': return <Settings2 size={14} className="text-purple-500" />;
+      case 'MAPPING': return <LinkIcon size={14} className="text-emerald-500" />;
+      default: return <Activity size={14} className="text-slate-400" />;
+    }
+  };
+
+  const getActionColor = (action: string) => {
+    switch(action) {
+      case 'CREATE': return 'text-blue-600 bg-blue-50 border-blue-100';
+      case 'UPDATE': return 'text-indigo-600 bg-indigo-50 border-indigo-100';
+      case 'DELETE': return 'text-rose-600 bg-rose-50 border-rose-100';
+      case 'APPROVE': return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+      case 'REJECT': return 'text-amber-600 bg-amber-50 border-amber-100';
+      default: return 'text-slate-600 bg-slate-50 border-slate-100';
+    }
+  };
+
   return (
     <div className="space-y-6">
        <div className="flex justify-between items-end">
         <div>
-           <h1 className="text-2xl font-bold text-slash-dark">Activity Tracking & Audit</h1>
-           <p className="text-slate-500 text-sm">Real-time mapping surveillance, diff analysis, and performance auditing.</p>
+           <h1 className="text-2xl font-bold text-slate-900">Activity Tracking & Audit</h1>
+           <p className="text-slate-500 text-sm font-medium">System-wide forensic surveillance and user performance analytics.</p>
         </div>
         <div className="flex gap-2">
-            <Button variant="secondary" className="h-10 text-xs">
-                <Download size={14} /> Export Full Audit CSV
+            <Button variant="secondary" className="h-10 text-xs shadow-sm">
+                <Download size={14} /> Export Audit Log
             </Button>
         </div>
       </div>
 
       {/* Performance Metrics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="p-6 col-span-2">
-              <div className="flex items-center justify-between mb-6">
+          <Card className="p-6 col-span-2 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-2">
                       <TrendingUp size={20} className="text-indigo-600" />
-                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">User Productivity Metrics</h3>
+                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">User Productivity</h3>
                   </div>
                   <div className="flex gap-4 text-[10px] font-bold text-slate-400">
-                      <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> MAPPINGS</div>
-                      <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> ACCURACY %</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> VOLUME</div>
+                      <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> ACCURACY %</div>
                   </div>
               </div>
               <div className="h-[200px] w-full">
+                {perfLoading ? <Skeleton className="w-full h-full" /> : (
                   <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={performanceData}>
+                      <BarChart data={chartData}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
                           <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
@@ -127,196 +157,227 @@ export const TrackingView: React.FC = () => {
                           <Bar dataKey="accuracy" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
                       </BarChart>
                   </ResponsiveContainer>
+                )}
               </div>
           </Card>
 
-          <Card className="p-6 bg-slate-900 text-white relative overflow-hidden">
-              <div className="relative z-10">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Total Integrity Score</h3>
+          <Card className="p-6 bg-slate-900 text-white relative overflow-hidden shadow-xl shadow-slate-900/20">
+              <div className="relative z-10 h-full flex flex-col">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Integrity Compliance Score</h3>
                   <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-4xl font-black">94.2</span>
-                      <span className="text-indigo-400 font-bold">%</span>
+                      <span className="text-5xl font-black text-white">{performance?.totalIntegrityScore || 0}</span>
+                      <span className="text-indigo-400 font-bold text-xl">%</span>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed mb-6">Aggregate accuracy score based on manual reviews of AI-suggested mappings across the system.</p>
+                  <p className="text-[10px] text-slate-400 leading-relaxed mb-auto pb-8">Aggregated precision score mapping human approvals against AI initializations.</p>
                   
-                  <div className="space-y-3">
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
-                          <span>Manual Accuracy</span>
-                          <span className="text-white">98%</span>
+                  <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
+                            <span>Manual Validation</span>
+                            <span className="text-emerald-400">{performance?.manualAccuracy || 0}%</span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                            <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${performance?.manualAccuracy || 0}%` }}></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                          <div className="bg-emerald-500 h-full w-[98%]"></div>
-                      </div>
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
-                          <span>AI Precision</span>
-                          <span className="text-white">82%</span>
-                      </div>
-                      <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                          <div className="bg-indigo-500 h-full w-[82%]"></div>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
+                            <span>AI Initial Precision</span>
+                            <span className="text-indigo-400">{performance?.aiPrecision || 0}%</span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                            <div className="bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${performance?.aiPrecision || 0}%` }}></div>
+                        </div>
                       </div>
                   </div>
               </div>
-              <Activity className="absolute -bottom-6 -right-6 text-white opacity-5" size={160} />
+              <Activity className="absolute -bottom-8 -right-8 text-white opacity-[0.03] rotate-12" size={180} />
           </Card>
       </div>
 
       {/* Filters */}
-      <Card className="p-4 bg-white border border-slate-200">
+      <Card className="p-4 bg-white border border-slate-200 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="md:col-span-1">
-             <Select 
-                label="Action Source"
-                value={actionSource}
-                onChange={e => { setActionSource(e.target.value); setPage(1); }}
-                options={[
-                    { value: 'all', label: 'All Sources' },
-                    { value: 'MANUAL', label: 'Manual Input' },
-                    { value: 'AI', label: 'AI Suggestion' },
-                    { value: 'BULK', label: 'Bulk Update' }
-                ]}
-                className="bg-white h-10"
-             />
-          </div>
-          <div className="md:col-span-1">
-             <Select 
-                label="Performer"
-                value={selectedUser}
-                onChange={e => { setSelectedUser(e.target.value); setPage(1); }}
-                options={users.map(u => ({ value: u.id, label: u.fullName }))}
-                className="bg-white h-10"
-             />
-          </div>
-          <div className="md:col-span-1">
-             <Input 
-                type="date"
-                label="Date From"
-                value={dateFrom}
-                onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-                className="bg-white h-10"
-             />
-          </div>
-          <div className="md:col-span-1">
-             <Input 
-                type="date"
-                label="Date To"
-                value={dateTo}
-                onChange={e => { setDateTo(e.target.value); setPage(1); }}
-                className="bg-white h-10"
-             />
-          </div>
-          <div className="flex items-end pb-0.5">
+          <Select 
+            label="Filter Source"
+            value={actionSource}
+            onChange={e => { setActionSource(e.target.value); setPage(1); }}
+            options={[
+                { value: 'all', label: 'All Operations' },
+                { value: 'MANUAL', label: 'Manual Entry' },
+                { value: 'AI', label: 'AI Generated' },
+                { value: 'BULK', label: 'Bulk Batch' }
+            ]}
+            className="bg-slate-50 h-10 border-slate-200"
+          />
+          <Select 
+            label="Audit Performer"
+            value={selectedUser}
+            onChange={e => { setSelectedUser(e.target.value); setPage(1); }}
+            options={users.map(u => ({ value: u.id, label: u.fullName }))}
+            className="bg-slate-50 h-10 border-slate-200"
+          />
+          <Input 
+            type="date"
+            label="Time Range Start"
+            value={dateFrom}
+            onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+            className="bg-slate-50 h-10 border-slate-200"
+          />
+          <Input 
+            type="date"
+            label="Time Range End"
+            value={dateTo}
+            onChange={e => { setDateTo(e.target.value); setPage(1); }}
+            className="bg-slate-50 h-10 border-slate-200"
+          />
+          <div className="flex items-end">
               {(selectedUser || dateFrom || dateTo || actionSource !== 'all') && (
-                <Button variant="ghost" onClick={() => { setSelectedUser(''); setDateFrom(''); setDateTo(''); setActionSource('all'); setPage(1); }} className="text-xs text-red-500 h-10 w-full">
-                  Clear Filters
+                <Button variant="ghost" onClick={() => { setSelectedUser(''); setDateFrom(''); setDateTo(''); setActionSource('all'); setPage(1); }} className="text-xs text-rose-600 h-10 w-full hover:bg-rose-50 font-bold">
+                  Reset Audit Filters
                 </Button>
               )}
           </div>
         </div>
       </Card>
 
-      {/* Log Feed */}
-      <Card className="flex flex-col min-h-[500px] overflow-hidden">
-        <div className="p-6 pb-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+      {/* Audit Logs */}
+      <Card className="flex flex-col min-h-[500px] overflow-hidden border-slate-200/60 shadow-lg">
+        <div className="p-6 pb-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-2">
                 <Clock className="text-slate-400" size={18} />
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Audit Trail</h3>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">System Transaction Log</h3>
             </div>
-            <span className="text-[10px] font-bold text-slate-400 px-2 py-1 bg-white border rounded shadow-sm">
-                PAGE {page} • {mappingsData?.totalElements || 0} TOTAL RECORDS
-            </span>
+            <div className="flex items-center gap-4">
+                <span className="text-[10px] font-bold text-slate-400 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    {logsData?.totalElements || 0} TOTAL RECORDS
+                </span>
+            </div>
         </div>
         
-        {isLoading ? (
-            <div className="flex-1 flex flex-col justify-center items-center py-20">
+        {logsLoading ? (
+            <div className="flex-1 flex flex-col justify-center items-center py-24">
                 <Loader2 className="animate-spin text-indigo-600 mb-4" size={32} />
-                <p className="text-sm text-slate-400 font-medium">Synchronizing audit logs...</p>
+                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest animate-pulse">Retrieving Secure Logs...</p>
             </div>
         ) : (
             <div className="flex-1 overflow-auto">
                 <div className="divide-y divide-slate-100">
-                    {(mappingsData?.content || []).map((m: any) => {
-                         const recordId = m?.id || m?.adpId || 'unknown';
-                         const user = users.find(u => u.id === m.updatedBy);
-                         const isExpanded = expandedId === recordId;
-                         
-                         // Mocking sources for demo - using defensive check for recordId
-                         const source = recordId.length % 3 === 0 ? 'AI' : recordId.length % 5 === 0 ? 'BULK' : 'MANUAL';
+                    {(logsData?.content || []).length === 0 ? (
+                        <div className="py-20 text-center">
+                            <Filter className="mx-auto text-slate-200 mb-3" size={48} />
+                            <p className="text-slate-400 font-medium">No transactions found for current filter criteria.</p>
+                        </div>
+                    ) : (logsData?.content || []).map((log: AuditLog) => {
+                         const isExpanded = expandedId === log.id;
+                         const user = users.find(u => u.id === log.userId);
                          
                          return (
-                             <div key={recordId} className={`transition-all ${isExpanded ? 'bg-indigo-50/20' : 'hover:bg-slate-50/50'}`}>
+                             <div key={log.id} className={`transition-all duration-200 ${isExpanded ? 'bg-slate-50/50' : 'hover:bg-slate-50/30'}`}>
                                  <div 
-                                    className="px-6 py-4 flex items-center justify-between cursor-pointer"
-                                    onClick={() => toggleExpand(recordId)}
+                                    className="px-6 py-4 flex items-center justify-between cursor-pointer group"
+                                    onClick={() => toggleExpand(log.id)}
                                  >
-                                     <div className="flex items-center gap-4 flex-1">
+                                     <div className="flex items-center gap-5 flex-1">
+                                         <div className="p-2.5 bg-white rounded-xl border border-slate-200 group-hover:border-slate-300 shadow-sm transition-colors">
+                                             {getEntityIcon(log.entityType)}
+                                         </div>
                                          <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-slate-900 text-sm">
-                                                  {(m.makeEnDesc || '')} {(m.modelEnDesc || 'Unknown Record')}
+                                            <div className="flex items-center gap-3">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter border ${getActionColor(log.action)}`}>
+                                                    {log.action}
                                                 </span>
-                                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
-                                                    {getSourceIcon(source)} {source}
+                                                <span className="font-bold text-slate-900 text-sm tracking-tight">
+                                                    {log.entityType.replace('SD_', '').replace('_', ' ')}: <span className="font-mono text-xs text-slate-500">#{log.entityId}</span>
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] text-slate-400 font-medium">{new Date(log.timestamp).toLocaleDateString()}</span>
+                                                <span className="text-[10px] text-slate-300">•</span>
+                                                <span className="text-[10px] text-slate-400 font-medium">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                                <div className="flex items-center gap-1.5 ml-3 px-1.5 py-0.5 bg-white border border-slate-100 rounded text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                    {getSourceIcon(log.source)} {log.source}
                                                 </div>
                                             </div>
-                                            <span className="text-[11px] text-slate-400 font-mono mt-0.5">{m.adpMakeId || 'N/A'} / {m.adpModelId || 'N/A'}</span>
                                          </div>
                                      </div>
 
                                      <div className="flex items-center gap-8">
-                                         <div className="hidden md:flex flex-col items-end">
-                                             <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${m.status === 'MAPPED' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${m.status === 'MAPPED' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                                {m.status || 'UNMAPPED'}
-                                             </div>
-                                             <span className="text-[10px] text-slate-400 mt-0.5">{m.updatedAt ? new Date(m.updatedAt).toLocaleTimeString() : '-'}</span>
-                                         </div>
-
                                          <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 border border-white">
-                                                    <UserIcon size={14} />
-                                                </div>
-                                                <div className="hidden sm:block">
-                                                    <div className="text-xs font-bold text-slate-700 leading-none">{user?.fullName?.split(' ')[0] || 'System'}</div>
-                                                    <div className="text-[10px] text-slate-400 uppercase mt-1 leading-none">Editor</div>
-                                                </div>
+                                            <div className="flex flex-col items-end mr-1">
+                                                <div className="text-xs font-bold text-slate-800 leading-none">{user?.fullName?.split(' ')[0] || log.userFullName || 'System'}</div>
+                                                <div className="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-1 leading-none">{user?.role?.replace('_', ' ') || 'Process'}</div>
                                             </div>
-                                            <div className="text-slate-300">
-                                                {isExpanded ? <ChevronDown className="rotate-180" size={16} /> : <ChevronDown size={16} />}
+                                            <div className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm group-hover:shadow-md transition-shadow">
+                                                <UserIcon size={16} />
                                             </div>
+                                         </div>
+                                         <div className="text-slate-300 group-hover:text-slate-400 transition-colors">
+                                             <ChevronDown className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} size={18} />
                                          </div>
                                      </div>
                                  </div>
 
                                  {isExpanded && (
-                                     <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-2 duration-200">
-                                         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                                             <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-100">
-                                                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                    <Activity size={12} className="text-indigo-500" /> Value Diff Comparison
+                                     <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-3 duration-300">
+                                         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xl">
+                                             <div className="bg-slate-50/50 px-6 py-4 flex justify-between items-center border-b border-slate-100">
+                                                 <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                    <ShieldCheck size={14} className="text-indigo-500" /> Transactional Forensic Analysis
                                                  </h4>
                                                  <Button 
                                                     variant="ghost" 
-                                                    className="h-7 text-[10px] gap-1 px-2 border border-slate-100 hover:border-slate-300"
-                                                    onClick={(e) => { e.stopPropagation(); setHistoryTargetId(recordId); }}
+                                                    className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 px-3 bg-white border border-slate-200 hover:bg-slate-900 hover:text-white transition-all"
+                                                    onClick={(e) => { e.stopPropagation(); setHistoryTargetId(log.entityId); }}
                                                  >
-                                                    <History size={12} /> View Full Timeline
+                                                    <History size={14} /> View Entity Timeline
                                                  </Button>
                                              </div>
 
-                                             <div className="space-y-1">
-                                                 <DiffRow label="Make Mapping" oldValue="Toyota (Raw)" newValue={m.sdMakeName || '-'} />
-                                                 <DiffRow label="Model Mapping" oldValue="Camry 2.5 (Raw)" newValue={m.sdModelName || '-'} />
-                                                 <DiffRow label="Confidence" oldValue="0%" newValue="94.2%" />
-                                                 <DiffRow label="Logic Path" oldValue="Null" newValue={source} />
-                                             </div>
-
-                                             <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center text-[10px] text-slate-400">
-                                                 <div className="flex gap-4">
-                                                     <span>IP ADDRESS: <span className="text-slate-600 font-mono">192.168.1.42</span></span>
-                                                     <span>SESSION: <span className="text-slate-600 font-mono">SX_82931</span></span>
+                                             <div className="p-6">
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                                     <div>
+                                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Modified Fields</div>
+                                                         <div className="space-y-1">
+                                                             {Object.keys(log.newValues || {}).map(key => (
+                                                                 <DiffRow key={key} label={key} oldValue={log.oldValues?.[key]} newValue={log.newValues?.[key]} />
+                                                             ))}
+                                                             {Object.keys(log.newValues || {}).length === 0 && (
+                                                                 <div className="text-xs text-slate-400 italic">No direct field changes detected (Possible metadata update).</div>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                     <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                            <Monitor size={14} /> Security Metadata
+                                                         </div>
+                                                         <div className="space-y-4">
+                                                             <div className="flex justify-between items-center pb-3 border-b border-slate-200/50">
+                                                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Client IP</span>
+                                                                 <span className="font-mono text-xs text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-100">{log.ipAddress || '127.0.0.1'}</span>
+                                                             </div>
+                                                             <div className="flex flex-col gap-2 pt-1">
+                                                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">User Agent</span>
+                                                                 <span className="text-[10px] text-slate-400 leading-relaxed font-mono bg-white p-2 rounded border border-slate-100 line-clamp-2" title={log.userAgent}>
+                                                                     {log.userAgent || 'Mozilla/5.0 (Unknown Platform)'}
+                                                                 </span>
+                                                             </div>
+                                                         </div>
+                                                     </div>
                                                  </div>
-                                                 <span className="italic font-medium">Transaction Verified by System Audit Engine</span>
+
+                                                 <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                                                     <div className="flex gap-4">
+                                                         <div className="flex items-center gap-1.5">
+                                                             <span className="text-[9px] font-bold text-slate-400 uppercase">Audit UUID:</span>
+                                                             <span className="text-[9px] font-mono text-slate-400">{log.id}</span>
+                                                         </div>
+                                                     </div>
+                                                     <div className="flex items-center gap-2">
+                                                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Verified in Persistent Store</span>
+                                                     </div>
+                                                 </div>
                                              </div>
                                          </div>
                                      </div>
@@ -327,8 +388,8 @@ export const TrackingView: React.FC = () => {
                 </div>
             </div>
         )}
-        <div className="p-2 border-t border-slate-100 bg-slate-50/30">
-             <Pagination currentPage={page} totalPages={mappingsData?.totalPages || 1} onPageChange={setPage} totalItems={mappingsData?.totalElements || 0} />
+        <div className="p-2 border-t border-slate-100 bg-slate-50/50">
+             <Pagination currentPage={page} totalPages={logsData?.totalPages || 1} onPageChange={setPage} totalItems={logsData?.totalElements || 0} />
         </div>
       </Card>
 
@@ -336,7 +397,7 @@ export const TrackingView: React.FC = () => {
         isOpen={!!historyTargetId} 
         onClose={() => setHistoryTargetId(null)} 
         adpId={historyTargetId} 
-        title="Comprehensive Change Lifecycle" 
+        title="Comprehensive Entity Lifecycle" 
       />
     </div>
   );

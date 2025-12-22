@@ -1,0 +1,45 @@
+
+# SlashData Vehicle Portal - AI Matching Workspace Backend Specification
+
+## 1. Overview
+The AI Matching Workspace is the high-performance "intelligence" layer of the portal. It allows for bulk identification of normalized vehicle hierarchies (Makes/Models) from raw ERP descriptions.
+
+## 2. AI Provider Orchestration (Gemini vs. ChatGPT)
+The backend MUST act as a proxy/gateway that routes requests based on the `aiProvider` flag in the system configuration (`AppConfig`).
+
+- **Config Source**: `SELECT ai_provider, gemini_api_key, openai_api_key, system_instruction FROM app_config LIMIT 1;`
+- **Logic**:
+    - If `ai_provider == 'gemini'`: Use Google GenAI SDK with `gemini_api_key`.
+    - If `ai_provider == 'openai'`: Use OpenAI SDK with `openai_api_key`.
+- **Instruction Injection**: The `system_instruction` from the configuration must be injected into every AI call to ensure consistent matching behavior regardless of the provider selected in the UI.
+
+## 3. Endpoints
+
+### 3.1 POST /api/ai/suggest
+- **Purpose**: Single-record analysis (used for the "Auto-Detect" button in modals).
+- **Input**: `{ "description": "2024 TOYOTA CAMRY SE" }`
+- **Output**: 
+  ```json
+  {
+    "make": "TOYOTA",
+    "model": "Camry",
+    "confidence": 98
+  }
+  ```
+
+### 3.2 POST /api/ai/batch-suggest
+- **Purpose**: High-throughput analysis for the AI Matching Workspace "Batch Analysis" feature.
+- **Input**: An array of objects: `[{ "id": "adp_1", "description": "..." }, ...]`
+- **Processing**: 
+    - The backend should ideally process these in parallel or use a structured prompt that requests a JSON array of results to minimize API round-trips.
+- **Output**: A map of results keyed by the input ID.
+
+## 4. Matching Logic & Confidence
+- **Normalized Output**: The AI must be instructed to return names that closely match the existing `sd_makes` and `sd_models` tables.
+- **Confidence Scoring**: 
+    - The AI provider should be prompted to provide a confidence percentage (0-100).
+    - Mappings with confidence below the `aiConfidenceThreshold` (from config) should be flagged for manual review but still returned to the UI.
+
+## 5. Security & Rate Limiting
+- **Key Security**: API keys must be decrypted on-the-fly in the service layer. Never return plain-text keys to the frontend (the `GET /api/config` endpoint must mask them).
+- **Rate Limiting**: Implement a 429 (Too Many Requests) handler to manage provider-specific rate limits (e.g., Gemini Flash vs. Pro tiers).

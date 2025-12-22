@@ -1,0 +1,61 @@
+
+# SlashData Vehicle Portal - Activity Tracking & Audit Backend Specification
+
+## 1. Overview
+The Audit & Tracking system provides a high-fidelity record of every change within the portal. It serves two purposes: 
+1. Technical Accountability (who changed what and when).
+2. Performance Analytics (AI precision vs. User productivity).
+
+## 2. Enhanced Audit Log Schema (`audit_logs`)
+A specialized table to capture atomic changes. This can be implemented using Hibernate Envers or a custom Event Listener.
+
+- `id`: UUID (Primary Key).
+- `entity_type`: ENUM('ADP_MASTER', 'SD_MAKE', 'SD_MODEL', 'MAPPING').
+- `entity_id`: String (Reference to the primary key of the modified object).
+- `action`: ENUM('CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT').
+- `source`: ENUM('MANUAL', 'AI', 'BULK').
+- `user_id`: UUID (FK to users).
+- `old_values`: JSON. Snapshot of the object state before the change.
+- `new_values`: JSON. Snapshot of the object state after the change.
+- `ip_address`: String.
+- `user_agent`: String.
+- `timestamp`: DateTime.
+
+## 3. API Endpoints
+
+### 3.1 GET /api/audit/performance
+- **Purpose**: Calculate metrics for the tracking dashboard.
+- **Metrics Logic**:
+    - **Mappings per User**: `COUNT(*)` grouped by `user_id` within the time period.
+    - **Accuracy Score**: 
+        - Formula: `(Approved AI Mappings / Total AI Mappings) * 100`.
+        - Approved = AI mappings that were approved in the Review Queue without modification.
+    - **Integrity Score**: Weighted average of Manual Accuracy (98%) and AI Precision.
+
+### 3.2 GET /api/audit/logs
+- **Purpose**: Paginated search for the audit feed.
+- **Query Params**: `page`, `size`, `userId`, `source`, `dateFrom`, `dateTo`.
+- **Response**: Must include the `userFullName` via a join for the UI.
+
+### 3.3 GET /api/adp/history/{id}
+- **Purpose**: Lifecycle timeline for a specific vehicle record.
+- **Return**: A chronological list of all `audit_logs` where `entity_id` matches the record.
+
+## 4. Value Diffing Logic (Server-Side)
+To provide the "Diff Row" view in the UI, the backend should ideally compute the diff between `old_values` and `new_values` JSON blobs to return only the modified fields.
+
+- **Example Response Part**:
+```json
+{
+  "changes": [
+    { "field": "sdModelId", "old": "null", "new": "201" },
+    { "field": "status", "old": "UNMAPPED", "new": "MAPPED" }
+  ]
+}
+```
+
+## 5. Security & Compliance Requirements
+- **Immutability**: The `audit_logs` table MUST NOT allow `UPDATE` or `DELETE` operations via the API or application layer.
+- **Retention**: Data should be persisted for at least 12 months.
+- **IP Capturing**: Use `X-Forwarded-For` headers if the app is behind a load balancer to ensure the real client IP is logged.
+- **Sensitivity**: If any field in JSON snapshots contains sensitive data (like passwords), those fields MUST be scrubbed before logging.
